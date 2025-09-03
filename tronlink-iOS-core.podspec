@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'tronlink-iOS-core'
-  s.version          = '1.0.1'
+  s.version          = '1.0.2'
   s.summary          = 'tronlink-iOS-core is repo of TronLink'
   s.module_name      = 'TLCore'
 
@@ -19,7 +19,7 @@ Pod::Spec.new do |s|
   s.dependency 'gRPC-ProtoRPC', '1.68.1'
   s.dependency 'gRPC-RxLibrary', '1.68.1'
    
-   s.dependency 'TronWalletWeb3Swift', '~> 1.0.1'
+   s.dependency 'TronWalletWeb3Swift', '1.1.0'
    s.dependency 'TronWalletKeystore', '~> 1.0.3'
    
    s.requires_arc = false
