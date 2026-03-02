@@ -21,6 +21,7 @@ Pod::Spec.new do |s|
    
    s.dependency 'TronWalletWeb3Swift', '1.1.0'
    s.dependency 'TronWalletKeystore', '~> 1.0.3'
+   s.dependency 'FMDB', '2.7.5'
    
    s.requires_arc = false
    s.requires_arc = [       "tronlink-iOS-core/Classes/gRPC/google/api/HTTP.pbobjc.m",
