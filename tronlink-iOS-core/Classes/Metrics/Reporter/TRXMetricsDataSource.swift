@@ -25,6 +25,12 @@ public protocol TRXMetricsDataSource: AnyObject {
     /// USDT contract address
     var usdtContractAddress: String { get }
     
+    /// Indicates if the current environment is online
+    var isOnlineEnvironment: Bool { get }
+    
+    /// Indicates if the current environment is pre-release
+    var isPreReleaseEnvironment: Bool { get }
+    
     /// Delegate network request for uploading statistical data
     func uploadStatisticalData(parameters: [String: Any], visible: Bool, success: @escaping (Bool, Bool) -> Void, failure: @escaping () -> Void)
     
