@@ -198,28 +198,44 @@ public class TRXStatisticalUploadManager: NSObject {
     
     func distributionTokenAmount(forTokenAmount tokenAmount: String, localHierarchyArr:Array<Int>) -> [Int] {
         var res = localHierarchyArr
-        let amount = tokenAmount.tronCore_doubleValue
-        if amount > 0 && amount <= 1 {
-            res[0] += 1
-        } else if amount > 1 && amount <= 10 {
-            res[1] += 1
-        } else if amount > 10 && amount <= 100 {
-            res[2] += 1
-        } else if amount > 100 && amount <= 1_000 {
-            res[3] += 1
-        } else if amount > 1_000 && amount <= 10_000 {
-            res[4] += 1
-        } else if amount > 10_000 && amount <= 100_000 {
-            res[5] += 1
-        } else if amount > 100_000 && amount <= 1_000_000 {
-            res[6] += 1
-        } else if amount > 1_000_000 && amount <= 10_000_000 {
-            res[7] += 1
-        } else if amount > 10_000_000 {
-            res[8] += 1
+        let amount = NSDecimalNumber(string: tokenAmount)
+
+        // Guard against invalid input (NSDecimalNumber.notANumber)
+        guard amount != NSDecimalNumber.notANumber else { return res }
+
+        let zero        = NSDecimalNumber.zero
+        let boundaries: [NSDecimalNumber] = [
+            NSDecimalNumber(value: 1),
+            NSDecimalNumber(value: 10),
+            NSDecimalNumber(value: 100),
+            NSDecimalNumber(value: 1_000),
+            NSDecimalNumber(value: 10_000),
+            NSDecimalNumber(value: 100_000),
+            NSDecimalNumber(value: 1_000_000),
+            NSDecimalNumber(value: 10_000_000)
+        ]
+
+        // amount must be > 0 to fall into any bucket
+        guard amount.compare(zero) == .orderedDescending else { return res }
+
+        for (index, upper) in boundaries.enumerated() {
+            if amount.compare(upper) != .orderedDescending {
+                // amount <= upper: check lower bound
+                let isAboveLower = index == 0
+                    ? true
+                    : amount.compare(boundaries[index - 1]) == .orderedDescending
+                if isAboveLower {
+                    res[index] += 1
+                    return res
+                }
+            }
         }
+
+        // amount > 10_000_000 → A9
+        res[8] += 1
         return res
     }
+
     
     //MARK: -upload
     public func uploadStatisticalData() {
