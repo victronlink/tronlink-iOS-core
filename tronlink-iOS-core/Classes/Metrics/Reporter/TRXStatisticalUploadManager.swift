@@ -264,14 +264,6 @@ public class TRXStatisticalUploadManager: NSObject {
         let assets = self.getCurrentChainUpdatedIsTrueAllAssetSyncModels()
         let transactions = self.getCurrentChainUpdatedIsTrueAllTransactionSyncModels()
         if assets.count > 0 || transactions.count > 0 {
-#if DEBUG
-            for model in assets {
-                print("资沉model, uId=\(String(describing: model.uId)),trx=\(String(describing: model.trxBalance)),usdt=\(String(describing: model.usdtBalance)),usd=\(String(describing: model.usdBalance)),date=\(String(describing: model.date)),idType=\(String(describing: model.idType))")
-            }
-            for model in transactions {
-                print("交易model, uId=\(String(describing: model.uId)), actionType=\(String(describing: model.actionType)), tokenAddress=\(String(describing: model.tokenAddress)), tokenAmount=\(String(describing: model.tokenAmount)), energy=\(String(describing: model.energy)), bandwidth=\(String(describing: model.bandwidth)), burn=\(String(describing: model.burn)), date=\(String(describing: model.date)), idType=\(String(describing: model.idType)), count=\(String(describing: model.count)), A1=\(String(describing: model.A1))")
-            }
-#endif
             TRXStatisticalUploadViewModel().uploadStatisticalDatabase(assets: assets, transactions: transactions) { [weak self] isUploadSuccess, visible in
                 guard let self = self else { return }
                 // UserDefaults write is lightweight, safe on any thread.
