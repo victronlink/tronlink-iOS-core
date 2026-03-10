@@ -12,10 +12,10 @@ extension Date {
 }
 
 extension String {
-    func tronCore_isPureNunmbr() -> Bool {
-        let scan = Scanner(string: self)
-        var val: Float = 0
-        return scan.scanFloat(&val) && scan.isAtEnd
+    func tronCore_isPureNumber() -> Bool {
+        let pattern = "^[0-9]+(\\.[0-9]{0,18})?$"
+        let predicate = NSPredicate(format: "SELF MATCHES %@", pattern)
+        return predicate.evaluate(with: self)
     }
     
     func tronCore_removeFloatSuffixZero() -> String {
