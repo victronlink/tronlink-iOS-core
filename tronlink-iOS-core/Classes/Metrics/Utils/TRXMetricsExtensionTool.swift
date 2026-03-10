@@ -13,7 +13,7 @@ extension Date {
 
 extension String {
     func tronCore_isPureNumber() -> Bool {
-        let pattern = "^[0-9]+(\\.[0-9]{0,18})?$"
+        let pattern = "^[0-9]+(\\.[0-9]{1,18})?$"
         let predicate = NSPredicate(format: "SELF MATCHES %@", pattern)
         return predicate.evaluate(with: self)
     }
@@ -58,10 +58,10 @@ extension String {
     func tronCore_decimalNumberByAdding(numberString: String) -> NSDecimalNumber {
         var inputNumberString = numberString
         var currentString = self 
-        if !self.tronCore_isPureNunmbr() || self == "" {
+        if !self.tronCore_isPureNumber() || self == "" {
             currentString = "0"
         }
-        if !numberString.tronCore_isPureNunmbr() || numberString == "" {
+        if !numberString.tronCore_isPureNumber() || numberString == "" {
             inputNumberString = "0"
         }
         let currentDecimalNumber = NSDecimalNumber(string: currentString)
