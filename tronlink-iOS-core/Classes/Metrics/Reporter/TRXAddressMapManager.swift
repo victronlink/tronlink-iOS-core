@@ -1,0 +1,107 @@
+import Foundation
+
+let Metrics_Address_Map_Key = "TRXAddressRandomIdMapping"
+
+public final class TRXAddressMapManager {
+    public static let shared = TRXAddressMapManager()
+    private var mapping: [String: String] = [:]   // address -> id (UUID string)
+    private var usedIds: Set<String> = []        // Quick duplicate check
+    private let queue = DispatchQueue(label: "com.tron.wallet.AddressMapManager", attributes: .concurrent)
+
+    private init() {
+        if let stored = UserDefaults.standard.dictionary(forKey: Metrics_Address_Map_Key) as? [String: String] {
+            mapping = stored
+            usedIds = Set(stored.values)
+        }
+    }
+
+    // MARK: - generate mapping relationship
+    public func generateMappings(forAllAddresses addresses: [String], completion: (() -> Void)? = nil) {
+        let normalizedSet = Set(addresses.map { Self.normalizeAddress($0) })
+        queue.async(flags: .barrier) {
+            var changed = false
+            for addr in normalizedSet {
+                if self.mapping[addr] == nil {
+                    var newId = Self.generateUUIDFull()
+                    while self.usedIds.contains(newId) {
+                        newId = Self.generateUUIDFull()
+                    }
+                    self.mapping[addr] = newId
+                    self.usedIds.insert(newId)
+                    changed = true
+                }
+            }
+            if changed {
+                self.saveToDisk()
+            }
+            if let cb = completion {
+                DispatchQueue.main.async { cb() }
+            }
+        }
+    }
+
+    // MARK: - Obtain the ID corresponding to the address
+    public func id(for address: String) -> String {
+        let normalized = Self.normalizeAddress(address)
+        var existing: String?
+        queue.sync { existing = mapping[normalized] }
+        if let v = existing { return v }
+        var newId: String!
+        queue.sync(flags: .barrier) {
+            if let v = self.mapping[normalized] {
+                newId = v
+                return
+            }
+            var candidate = Self.generateUUIDFull()
+            while self.usedIds.contains(candidate) {
+                candidate = Self.generateUUIDFull()
+            }
+            self.mapping[normalized] = candidate
+            self.usedIds.insert(candidate)
+            self.saveToDisk()
+            newId = candidate
+        }
+        return newId
+    }
+
+    // MARK: - Delete/Reset
+    public func removeMapping(for address: String) {
+        let normalized = Self.normalizeAddress(address)
+        queue.async(flags: .barrier) {
+            if let id = self.mapping.removeValue(forKey: normalized) {
+                self.usedIds.remove(id)
+                self.saveToDisk()
+            }
+        }
+    }
+
+    public func resetAllMappings() {
+        queue.async(flags: .barrier) {
+            self.mapping.removeAll()
+            self.usedIds.removeAll()
+            self.saveToDisk()
+        }
+    }
+
+    // Obtain the mapping of all addresses
+    public func allMappings() -> [String: String] {
+        var snap: [String: String] = [:]
+        queue.sync { snap = self.mapping }
+        return snap
+    }
+
+    // MARK: - save
+    private func saveToDisk() {
+        UserDefaults.standard.set(self.mapping, forKey: Metrics_Address_Map_Key)
+    }
+
+    private static func generateUUIDFull() -> String {
+        return UUID().uuidString
+    }
+
+    
+    private static func normalizeAddress(_ addr: String) -> String {
+        return addr.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
