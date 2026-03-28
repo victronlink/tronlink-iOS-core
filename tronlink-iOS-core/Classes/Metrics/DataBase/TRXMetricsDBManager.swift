@@ -13,16 +13,25 @@ public class TRXMetricsDBManager: NSObject {
 
     private override init() {
         super.init()
-        let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+
+        guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            // Should never happen on a real iOS device; fall back to in-memory DB so the app keeps running
+            dataBaseQueue = FMDatabaseQueue(path: ":memory:")
+            createAddressMapTable()
+            createAssetSyncTable()
+            createTransactionSyncTable()
+            return
+        }
+
         try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
         let dbURL = appSupportDir.appendingPathComponent("TronLinkMetrics.sqlite")
 
         // Migrate legacy DB from Documents to ApplicationSupport.
         // Uses a flag so failed attempts retry on next launch instead of being silently skipped.
         if !UserDefaults.standard.bool(forKey: TRXMetricsDBManager.kDBPathMigrationKey) {
-            let legacyURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("TronLinkMetrics.sqlite")
-            if FileManager.default.fileExists(atPath: legacyURL.path) {
+            if let legacyURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
+                .appendingPathComponent("TronLinkMetrics.sqlite"),
+               FileManager.default.fileExists(atPath: legacyURL.path) {
                 // Remove any empty/partial DB left by a previous failed attempt, then retry
                 try? FileManager.default.removeItem(at: dbURL)
                 do {
@@ -38,8 +47,9 @@ public class TRXMetricsDBManager: NSObject {
         }
 
         try? (dbURL as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
-        dataBaseQueue = FMDatabaseQueue(path: dbURL.path)
-        
+        // Fall back to in-memory DB if the file-based queue fails (e.g. disk permission error)
+        dataBaseQueue = FMDatabaseQueue(path: dbURL.path) ?? FMDatabaseQueue(path: ":memory:")
+
         createAddressMapTable()
         createAssetSyncTable()
         createTransactionSyncTable()
