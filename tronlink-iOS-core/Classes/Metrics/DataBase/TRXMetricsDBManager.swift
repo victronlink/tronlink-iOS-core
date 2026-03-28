@@ -18,9 +18,9 @@ public class TRXMetricsDBManager: NSObject {
         
         dataBaseQueue = FMDatabaseQueue(path: dbPath)
         
+        createAddressMapTable()
         createAssetSyncTable()
         createTransactionSyncTable()
-        createAddressMapTable()
     }
 
     // MARK: - Legacy Data Migration
