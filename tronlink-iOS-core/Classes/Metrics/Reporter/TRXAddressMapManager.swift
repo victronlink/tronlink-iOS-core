@@ -57,10 +57,10 @@ public final class TRXAddressMapManager {
         var existing: String?
         queue.sync { existing = mapping[normalized] }
         if let v = existing { return v }
-        var newId: String!
+        var result = ""
         queue.sync(flags: .barrier) {
             if let v = self.mapping[normalized] {
-                newId = v
+                result = v
                 return
             }
             var candidate = Self.generateUUIDFull()
@@ -70,9 +70,9 @@ public final class TRXAddressMapManager {
             self.mapping[normalized] = candidate
             self.usedIds.insert(candidate)
             self.saveToDisk()
-            newId = candidate
+            result = candidate
         }
-        return newId
+        return result
     }
 
     // MARK: - Delete/Reset
