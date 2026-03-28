@@ -72,28 +72,19 @@ public class TRXMetricsDBManager: NSObject {
         // Migrate asset records and track each result.
         for model in legacyAssets {
             let ok = upsertAssetSync(model: model)
-            if !ok {
-                print("[TRXMetricsDBManager] Asset migration failed: uId=\(model.uId ?? "-"), date=\(model.date ?? "-")")
-                allSucceeded = false
-            }
+            if !ok { allSucceeded = false }
         }
 
         // Migrate transaction records and track each result.
         for model in legacyTransactions {
             let ok = upsertTransactionSync(model: model)
-            if !ok {
-                print("[TRXMetricsDBManager] Transaction migration failed: uId=\(model.uId ?? "-"), actionType=\(model.actionType ?? -1), date=\(model.date ?? "-")")
-                allSucceeded = false
-            }
+            if !ok { allSucceeded = false }
         }
 
         if allSucceeded {
             UserDefaults.standard.set(true, forKey: migrationKey)
-            print("[TRXMetricsDBManager] Migration done for chain=\(chain), assets=\(legacyAssets.count), transactions=\(legacyTransactions.count)")
-        } else {
-            // Do NOT mark done and do NOT clear old data – will retry next upload cycle.
-            print("[TRXMetricsDBManager] Migration partially failed for chain=\(chain), will retry next time.")
         }
+        // If not all succeeded: do NOT mark done – will retry next upload cycle.
     }
     
     // MARK: - ASSET SYNC TABLE CREATION
@@ -122,10 +113,7 @@ public class TRXMetricsDBManager: NSObject {
                             UNIQUE(chain, uId, date)
                         )
                         """
-                        let success = db.executeUpdate(createSql, withArgumentsIn: [])
-                        if !success {
-                            print("AssetSyncTable create failed: \(db.lastErrorMessage())")
-                        }
+                        db.executeUpdate(createSql, withArgumentsIn: [])
                     }
                 }
             }
@@ -384,10 +372,7 @@ public class TRXMetricsDBManager: NSObject {
                             UNIQUE(chain, uId, actionType, tokenAddress, date)
                         )
                         """
-                        let success = db.executeUpdate(createSql, withArgumentsIn: [])
-                        if !success {
-                            print("TransactionSyncTable create failed: \(db.lastErrorMessage())")
-                        }
+                        db.executeUpdate(createSql, withArgumentsIn: [])
                     }
                 }
             }
@@ -586,9 +571,7 @@ public class TRXMetricsDBManager: NSObject {
                 uuid TEXT NOT NULL
             )
             """
-            if !db.executeUpdate(sql, withArgumentsIn: []) {
-                print("AddressMapTable create failed: \(db.lastErrorMessage())")
-            }
+            db.executeUpdate(sql, withArgumentsIn: [])
         }
     }
 

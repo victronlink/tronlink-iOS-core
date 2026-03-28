@@ -267,12 +267,9 @@ public class TRXStatisticalUploadManager: NSObject {
                             self.callBackUpsertTransactionModel(model: ts)
                         }
                     }
-                    print("Upload success")
                 } else {
-                    print("Upload failed")
                 }
             } failure: {
-                print("Upload failed")
             }
         }
     }
