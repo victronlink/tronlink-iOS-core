@@ -35,12 +35,12 @@ public extension String {
     }
     
     var hex: String {
-        let data = self.data(using: .utf8)!
+        let data = self.data(using: .utf8) ?? Data()
         return data.map { String(format: "%02x", $0) }.joined()
     }
-    
+
     var hexEncoded: String {
-        let data = self.data(using: .utf8)!
+        let data = self.data(using: .utf8) ?? Data()
         return data.hexEncoded
     }
     
