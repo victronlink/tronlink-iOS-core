@@ -20,6 +20,7 @@ public class TRXMetricsDBManager: NSObject {
         
         createAssetSyncTable()
         createTransactionSyncTable()
+        createAddressMapTable()
     }
 
     // MARK: - Legacy Data Migration
@@ -552,6 +553,70 @@ public class TRXMetricsDBManager: NSObject {
         }
         return result
     }
+
+    // MARK: - ADDRESS MAP TABLE
+
+    public func createAddressMapTable() {
+        dataBaseQueue.inDatabase { db in
+            let sql = """
+            CREATE TABLE IF NOT EXISTS AddressMapTable (
+                address TEXT PRIMARY KEY,
+                uuid TEXT NOT NULL
+            )
+            """
+            if !db.executeUpdate(sql, withArgumentsIn: []) {
+                print("AddressMapTable create failed: \(db.lastErrorMessage())")
+            }
+        }
+    }
+
+    /// Replaces all address→uuid mappings atomically. Returns true on success.
+    @discardableResult
+    public func saveAddressMappings(_ mapping: [String: String]) -> Bool {
+        var result = false
+        dataBaseQueue.inDatabase { db in
+            db.beginTransaction()
+            guard db.executeUpdate("DELETE FROM AddressMapTable", withArgumentsIn: []) else {
+                db.rollback()
+                return
+            }
+            var allInserted = true
+            for (address, uuid) in mapping {
+                if !db.executeUpdate(
+                    "INSERT INTO AddressMapTable (address, uuid) VALUES (?, ?)",
+                    withArgumentsIn: [address, uuid]
+                ) {
+                    allInserted = false
+                    break
+                }
+            }
+            if allInserted {
+                db.commit()
+                result = true
+            } else {
+                db.rollback()
+            }
+        }
+        return result
+    }
+
+    public func loadAllAddressMappings() -> [String: String] {
+        var result: [String: String] = [:]
+        dataBaseQueue.inDatabase { db in
+            if let rs = try? db.executeQuery("SELECT address, uuid FROM AddressMapTable", values: nil) {
+                while rs.next() {
+                    if let addr = rs.string(forColumn: "address"),
+                       let uuid = rs.string(forColumn: "uuid") {
+                        result[addr] = uuid
+                    }
+                }
+                rs.close()
+            }
+        }
+        return result
+    }
+
+    // MARK: -
 
     @discardableResult
     public func upsertTransactionSync(model: TRXTransactionSyncModel) -> Bool {
