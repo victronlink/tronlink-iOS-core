@@ -9,14 +9,36 @@ public class TRXMetricsDBManager: NSObject {
     private var dataBaseQueue: FMDatabaseQueue!
     
     private static let kMigrationDoneKeyPrefix = "TRXMetricsMigrationDone_"
+    private static let kDBPathMigrationKey = "TRXMetricsDBPathMigrationDone"
 
     private override init() {
         super.init()
-        let documentPaths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
-        let documentDir = documentPaths.first!
-        let dbPath = (documentDir as NSString).appendingPathComponent("TronLinkMetrics.sqlite")
-        
-        dataBaseQueue = FMDatabaseQueue(path: dbPath)
+        let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
+        let dbURL = appSupportDir.appendingPathComponent("TronLinkMetrics.sqlite")
+
+        // Migrate legacy DB from Documents to ApplicationSupport.
+        // Uses a flag so failed attempts retry on next launch instead of being silently skipped.
+        if !UserDefaults.standard.bool(forKey: TRXMetricsDBManager.kDBPathMigrationKey) {
+            let legacyURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+                .appendingPathComponent("TronLinkMetrics.sqlite")
+            if FileManager.default.fileExists(atPath: legacyURL.path) {
+                // Remove any empty/partial DB left by a previous failed attempt, then retry
+                try? FileManager.default.removeItem(at: dbURL)
+                do {
+                    try FileManager.default.moveItem(at: legacyURL, to: dbURL)
+                    UserDefaults.standard.set(true, forKey: TRXMetricsDBManager.kDBPathMigrationKey)
+                } catch {
+                    // Move failed; old file preserved in Documents; will retry next launch
+                }
+            } else {
+                // New user or no legacy DB; mark done so this block is never entered again
+                UserDefaults.standard.set(true, forKey: TRXMetricsDBManager.kDBPathMigrationKey)
+            }
+        }
+
+        try? (dbURL as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
+        dataBaseQueue = FMDatabaseQueue(path: dbURL.path)
         
         createAddressMapTable()
         createAssetSyncTable()
