@@ -57,20 +57,27 @@ public final class TRXAddressMapManager {
         var existing: String?
         queue.sync { existing = mapping[normalized] }
         if let v = existing { return v }
+
         var result = ""
+        var needsSave = false
+        // Only mutate in-memory state inside the sync barrier (fast, no I/O).
+        // The queue lock is released as soon as the barrier block returns.
         queue.sync(flags: .barrier) {
-            if let v = self.mapping[normalized] {
-                result = v
-                return
-            }
+            if let v = self.mapping[normalized] { result = v; return }
             var candidate = Self.generateUUIDFull()
-            while self.usedIds.contains(candidate) {
-                candidate = Self.generateUUIDFull()
-            }
+            while self.usedIds.contains(candidate) { candidate = Self.generateUUIDFull() }
             self.mapping[normalized] = candidate
             self.usedIds.insert(candidate)
-            self.saveToDisk()
             result = candidate
+            needsSave = true
+        }
+        // Persist asynchronously on a background queue so the caller's thread
+        // (potentially main) is never blocked by FMDB I/O, and the mapping queue
+        // remains available to other readers/writers during the disk write.
+        if needsSave {
+            DispatchQueue.global(qos: .utility).async {
+                TRXMetricsDBManager.shared.saveAddressMappings(self.allMappings())
+            }
         }
         return result
     }
