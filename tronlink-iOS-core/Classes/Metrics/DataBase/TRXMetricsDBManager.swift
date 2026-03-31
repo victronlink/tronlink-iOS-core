@@ -50,12 +50,7 @@ public class TRXMetricsDBManager: NSObject {
         dataBaseQueue = FMDatabaseQueue(path: dbURL.path) ?? FMDatabaseQueue(path: ":memory:")
         // Set backup exclusion after FMDB creates the file, so the flag is applied on
         // first launch too (setResourceValue requires the file to already exist).
-        do {
-            try (dbURL as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
-            print("[TRXMetricsDBManager] iCloud backup exclusion set successfully: \(dbURL.path)")
-        } catch {
-            print("[TRXMetricsDBManager] Failed to set iCloud backup exclusion: \(error), path: \(dbURL.path)")
-        }
+        try? (dbURL as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
 
         createAddressMapTable()
         createAssetSyncTable()
