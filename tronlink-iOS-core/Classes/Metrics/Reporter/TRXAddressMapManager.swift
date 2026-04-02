@@ -9,7 +9,18 @@ public final class TRXAddressMapManager {
     private let queue = DispatchQueue(label: "com.tron.wallet.AddressMapManager", attributes: .concurrent)
 
     private init() {
-        if let stored = UserDefaults.standard.dictionary(forKey: Metrics_Address_Map_Key) as? [String: String] {
+        // Migrate legacy UserDefaults data to FMDB on first launch after upgrade.
+        // Only clear UserDefaults once the DB write succeeds, so the migration retries
+        // on the next launch if the write fails (e.g. disk full).
+        if let legacy = UserDefaults.standard.dictionary(forKey: Metrics_Address_Map_Key) as? [String: String],
+           !legacy.isEmpty {
+            mapping = legacy
+            usedIds = Set(legacy.values)
+            if TRXMetricsDBManager.shared.saveAddressMappings(legacy) {
+                UserDefaults.standard.removeObject(forKey: Metrics_Address_Map_Key)
+            }
+        } else {
+            let stored = TRXMetricsDBManager.shared.loadAllAddressMappings()
             mapping = stored
             usedIds = Set(stored.values)
         }
@@ -46,22 +57,29 @@ public final class TRXAddressMapManager {
         var existing: String?
         queue.sync { existing = mapping[normalized] }
         if let v = existing { return v }
-        var newId: String!
+
+        var result = ""
+        var needsSave = false
+        // Only mutate in-memory state inside the sync barrier (fast, no I/O).
+        // The queue lock is released as soon as the barrier block returns.
         queue.sync(flags: .barrier) {
-            if let v = self.mapping[normalized] {
-                newId = v
-                return
-            }
+            if let v = self.mapping[normalized] { result = v; return }
             var candidate = Self.generateUUIDFull()
-            while self.usedIds.contains(candidate) {
-                candidate = Self.generateUUIDFull()
-            }
+            while self.usedIds.contains(candidate) { candidate = Self.generateUUIDFull() }
             self.mapping[normalized] = candidate
             self.usedIds.insert(candidate)
-            self.saveToDisk()
-            newId = candidate
+            result = candidate
+            needsSave = true
         }
-        return newId
+        // Persist asynchronously on a background queue so the caller's thread
+        // (potentially main) is never blocked by FMDB I/O, and the mapping queue
+        // remains available to other readers/writers during the disk write.
+        if needsSave {
+            DispatchQueue.global(qos: .utility).async {
+                TRXMetricsDBManager.shared.saveAddressMappings(self.allMappings())
+            }
+        }
+        return result
     }
 
     // MARK: - Delete/Reset
@@ -92,16 +110,14 @@ public final class TRXAddressMapManager {
 
     // MARK: - save
     private func saveToDisk() {
-        UserDefaults.standard.set(self.mapping, forKey: Metrics_Address_Map_Key)
+        TRXMetricsDBManager.shared.saveAddressMappings(self.mapping)
     }
 
     private static func generateUUIDFull() -> String {
         return UUID().uuidString
     }
 
-    
     private static func normalizeAddress(_ addr: String) -> String {
         return addr.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
-
