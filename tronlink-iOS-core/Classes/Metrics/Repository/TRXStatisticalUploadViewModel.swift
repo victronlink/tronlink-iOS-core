@@ -1,5 +1,3 @@
-import UIKit
-
 class TRXStatisticalUploadViewModel: NSObject {
     //MARK: -Upload
     func uploadStatisticalDatabase(assets:[TRXAssetSyncModel],

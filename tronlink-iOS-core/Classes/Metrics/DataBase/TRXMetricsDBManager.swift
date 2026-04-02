@@ -9,15 +9,50 @@ public class TRXMetricsDBManager: NSObject {
     private var dataBaseQueue: FMDatabaseQueue!
     
     private static let kMigrationDoneKeyPrefix = "TRXMetricsMigrationDone_"
+    private static let kDBPathMigrationKey = "TRXMetricsDBPathMigrationDone"
 
     private override init() {
         super.init()
-        let documentPaths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
-        let documentDir = documentPaths.first!
-        let dbPath = (documentDir as NSString).appendingPathComponent("TronLinkMetrics.sqlite")
-        
-        dataBaseQueue = FMDatabaseQueue(path: dbPath)
-        
+
+        guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            // Should never happen on a real iOS device; fall back to in-memory DB so the app keeps running
+            dataBaseQueue = FMDatabaseQueue(path: ":memory:")
+            createAddressMapTable()
+            createAssetSyncTable()
+            createTransactionSyncTable()
+            return
+        }
+
+        try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
+        let dbURL = appSupportDir.appendingPathComponent("TronLinkMetrics.sqlite")
+
+        // Migrate legacy DB from Documents to ApplicationSupport.
+        // Uses a flag so failed attempts retry on next launch instead of being silently skipped.
+        if !UserDefaults.standard.bool(forKey: TRXMetricsDBManager.kDBPathMigrationKey) {
+            if let legacyURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
+                .appendingPathComponent("TronLinkMetrics.sqlite"),
+               FileManager.default.fileExists(atPath: legacyURL.path) {
+                // Remove any empty/partial DB left by a previous failed attempt, then retry
+                try? FileManager.default.removeItem(at: dbURL)
+                do {
+                    try FileManager.default.moveItem(at: legacyURL, to: dbURL)
+                    UserDefaults.standard.set(true, forKey: TRXMetricsDBManager.kDBPathMigrationKey)
+                } catch {
+                    // Move failed; old file preserved in Documents; will retry next launch
+                }
+            } else {
+                // New user or no legacy DB; mark done so this block is never entered again
+                UserDefaults.standard.set(true, forKey: TRXMetricsDBManager.kDBPathMigrationKey)
+            }
+        }
+
+        // Fall back to in-memory DB if the file-based queue fails (e.g. disk permission error)
+        dataBaseQueue = FMDatabaseQueue(path: dbURL.path) ?? FMDatabaseQueue(path: ":memory:")
+        // Set backup exclusion after FMDB creates the file, so the flag is applied on
+        // first launch too (setResourceValue requires the file to already exist).
+        try? (dbURL as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
+
+        createAddressMapTable()
         createAssetSyncTable()
         createTransactionSyncTable()
     }
@@ -49,28 +84,19 @@ public class TRXMetricsDBManager: NSObject {
         // Migrate asset records and track each result.
         for model in legacyAssets {
             let ok = upsertAssetSync(model: model)
-            if !ok {
-                print("[TRXMetricsDBManager] Asset migration failed: uId=\(model.uId ?? "-"), date=\(model.date ?? "-")")
-                allSucceeded = false
-            }
+            if !ok { allSucceeded = false }
         }
 
         // Migrate transaction records and track each result.
         for model in legacyTransactions {
             let ok = upsertTransactionSync(model: model)
-            if !ok {
-                print("[TRXMetricsDBManager] Transaction migration failed: uId=\(model.uId ?? "-"), actionType=\(model.actionType ?? -1), date=\(model.date ?? "-")")
-                allSucceeded = false
-            }
+            if !ok { allSucceeded = false }
         }
 
         if allSucceeded {
             UserDefaults.standard.set(true, forKey: migrationKey)
-            print("[TRXMetricsDBManager] Migration done for chain=\(chain), assets=\(legacyAssets.count), transactions=\(legacyTransactions.count)")
-        } else {
-            // Do NOT mark done and do NOT clear old data – will retry next upload cycle.
-            print("[TRXMetricsDBManager] Migration partially failed for chain=\(chain), will retry next time.")
         }
+        // If not all succeeded: do NOT mark done – will retry next upload cycle.
     }
     
     // MARK: - ASSET SYNC TABLE CREATION
@@ -99,10 +125,7 @@ public class TRXMetricsDBManager: NSObject {
                             UNIQUE(chain, uId, date)
                         )
                         """
-                        let success = db.executeUpdate(createSql, withArgumentsIn: [])
-                        if !success {
-                            print("AssetSyncTable create failed: \(db.lastErrorMessage())")
-                        }
+                        db.executeUpdate(createSql, withArgumentsIn: [])
                     }
                 }
             }
@@ -361,10 +384,7 @@ public class TRXMetricsDBManager: NSObject {
                             UNIQUE(chain, uId, actionType, tokenAddress, date)
                         )
                         """
-                        let success = db.executeUpdate(createSql, withArgumentsIn: [])
-                        if !success {
-                            print("TransactionSyncTable create failed: \(db.lastErrorMessage())")
-                        }
+                        db.executeUpdate(createSql, withArgumentsIn: [])
                     }
                 }
             }
@@ -552,6 +572,68 @@ public class TRXMetricsDBManager: NSObject {
         }
         return result
     }
+
+    // MARK: - ADDRESS MAP TABLE
+
+    public func createAddressMapTable() {
+        dataBaseQueue.inDatabase { db in
+            let sql = """
+            CREATE TABLE IF NOT EXISTS AddressMapTable (
+                address TEXT PRIMARY KEY,
+                uuid TEXT NOT NULL
+            )
+            """
+            db.executeUpdate(sql, withArgumentsIn: [])
+        }
+    }
+
+    /// Replaces all address→uuid mappings atomically. Returns true on success.
+    @discardableResult
+    public func saveAddressMappings(_ mapping: [String: String]) -> Bool {
+        var result = false
+        dataBaseQueue.inDatabase { db in
+            db.beginTransaction()
+            guard db.executeUpdate("DELETE FROM AddressMapTable", withArgumentsIn: []) else {
+                db.rollback()
+                return
+            }
+            var allInserted = true
+            for (address, uuid) in mapping {
+                if !db.executeUpdate(
+                    "INSERT INTO AddressMapTable (address, uuid) VALUES (?, ?)",
+                    withArgumentsIn: [address, uuid]
+                ) {
+                    allInserted = false
+                    break
+                }
+            }
+            if allInserted {
+                db.commit()
+                result = true
+            } else {
+                db.rollback()
+            }
+        }
+        return result
+    }
+
+    public func loadAllAddressMappings() -> [String: String] {
+        var result: [String: String] = [:]
+        dataBaseQueue.inDatabase { db in
+            if let rs = try? db.executeQuery("SELECT address, uuid FROM AddressMapTable", values: nil) {
+                while rs.next() {
+                    if let addr = rs.string(forColumn: "address"),
+                       let uuid = rs.string(forColumn: "uuid") {
+                        result[addr] = uuid
+                    }
+                }
+                rs.close()
+            }
+        }
+        return result
+    }
+
+    // MARK: -
 
     @discardableResult
     public func upsertTransactionSync(model: TRXTransactionSyncModel) -> Bool {
