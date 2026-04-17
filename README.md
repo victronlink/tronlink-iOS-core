@@ -46,7 +46,7 @@ Records are merged locally per `(uId, actionType, tokenAddress, date)` before up
 // TRXAssetSyncModel — daily asset snapshot (one per uId per UTC day)
 public var uId: String?           // anonymous UUID, never the address
 public var idType: Int?           // wallet provenance enum; watch wallets skipped
-public var trxBalance, usdtBalance, usdBalance: String?
+public var balance: String?
 public var date: String?
 public var chain: String?
 
