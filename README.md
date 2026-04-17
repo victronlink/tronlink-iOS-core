@@ -40,25 +40,8 @@ public func id(for address: String) -> String {
 
 ### What Is Uploaded
 
-Records are merged locally per `(uId, actionType, tokenAddress, date)` before upload, and raw amounts are distributed into 9 logarithmic buckets (`A1`..`A9`, e.g. `A1=(0,1]`, ..., `A9=(10m,+∞)`). Only these two payloads are sent (encrypted):
+Records are merged locally per `(uId, actionType, tokenAddress, date)` before upload, and raw amounts are distributed into 9 logarithmic buckets (`A1`..`A9`, e.g. `A1=(0,1]`, ..., `A9=(10m,+∞)`). And the payloads are sent encrypted.
 
-```swift
-// TRXAssetSyncModel — daily asset snapshot (one per uId per UTC day)
-public var uId: String?           // anonymous UUID, never the address
-public var idType: Int?           // wallet provenance enum; watch wallets skipped
-public var balance: String?
-public var date: String?
-public var chain: String?
-
-// TRXTransactionSyncModel — aggregated daily action counts
-public var uId: String?
-public var actionType: Int?       // closed enum; unknown contract calls discarded
-public var tokenAddress: String?  // TRX / TRC10 / TRC20 id
-public var count: Int?
-public var tokenAmount, energy, bandwidth, burn: String?
-public var A1, A2, A3, A4, A5, A6, A7, A8, A9: Int?  // bucketed amount distribution
-public var date: String?
-```
 
 ## Example
 
