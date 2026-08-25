@@ -15,6 +15,11 @@ Core 提交只增加单模块公共 API smoke 和四个最终 manifest；Main �
 完整逐命令证据见
 [`evidence/task-4-command-ledger.md`](evidence/task-4-command-ledger.md)。
 
+原始 Task 4 证据提交是 `1ce7c4e2d96fbb5aa40981df0d098235fa2a8104`。本报告
+后续的证据修订无法在自身内容中引用自身 SHA；回滚时以
+`1ce7c4e2d96fbb5aa40981df0d098235fa2a8104..HEAD` 加两个文档路径进行确定性发现，
+避免循环引用。
+
 ## 最终模块与依赖契约
 
 最终 podspec 保持：
@@ -168,10 +173,28 @@ TLCORE_LOCAL_PATH=/Users/viccc/source/tronlink-iOS-core pod install
 
 ## 回滚顺序
 
-从最新到最旧执行：
+以下命令按“最新到最旧”执行，并明确限定仓库。第一步先找出原始证据提交之后，
+只修改本报告或 Task 4 command ledger 的所有修订提交；`git log` 默认按最新到最旧
+输出，循环依次回滚：
 
-1. 回滚记录本报告与 Task 4 command ledger 的 docs 提交；
-2. 在 Main 回滚 `c641762a5502b28478b555b75c51d14f5cc29f39`；
-3. 在 Core 回滚 `9e535d3ca2b70715b0959676eb8b787aa6c12e8f`。
+```bash
+CORE_REPO=/Users/viccc/source/tronlink-iOS-core
+MAIN_REPO=/Users/viccc/working/4_22_0/TronLink_iOS
 
-回滚后按主工程复验入口重新执行 `pod install`，不要覆盖用户原有 lock/project 改动。
+git -C "$CORE_REPO" log --format='%H' 1ce7c4e2d96fbb5aa40981df0d098235fa2a8104..HEAD -- docs/migration/05-single-module-cleanup.md docs/migration/evidence/task-4-command-ledger.md |
+while IFS= read -r task4_docs_amendment; do
+  test -n "$task4_docs_amendment" || continue
+  git -C "$CORE_REPO" revert --no-edit "$task4_docs_amendment"
+done
+
+git -C "$CORE_REPO" revert --no-edit 1ce7c4e2d96fbb5aa40981df0d098235fa2a8104
+git -C "$MAIN_REPO" revert --no-edit c641762a5502b28478b555b75c51d14f5cc29f39
+git -C "$CORE_REPO" revert --no-edit 9e535d3ca2b70715b0959676eb8b787aa6c12e8f
+
+cd "$MAIN_REPO"
+TLCORE_LOCAL_PATH=/Users/viccc/source/tronlink-iOS-core pod install
+```
+
+执行前应确认两仓没有会与这些指定提交冲突的新增 staged change。Main 原有
+`Podfile.lock`、project 与未跟踪文件不属于这些 revert 的目标；重新安装 Pods 时仍需
+遵守用户文件保护策略。
