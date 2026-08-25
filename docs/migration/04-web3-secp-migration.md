@@ -262,7 +262,7 @@ final class EmbeddedWeb3DifferentialTests: XCTestCase {
         )
     }
 
-    func testABIv2TypeParsingAndUintRoundTripMatchesLegacyWeb3() throws {
+    func testABIv2EncodingAndDecodingMatchesLegacyWeb3() throws {
         XCTAssertThrowsError(try web3swift.ABIv2TypeParser.parseTypeString("(address,uint256[])[]"))
         XCTAssertThrowsError(try TLCore.ABIv2TypeParser.parseTypeString("(address,uint256[])[]"))
 
