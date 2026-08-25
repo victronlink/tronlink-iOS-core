@@ -203,7 +203,12 @@ while IFS= read -r final_report_commit; do
   git -C "$CORE_REPO" revert --no-edit "$final_report_commit"
 done
 
-git -C "$CORE_REPO" revert --no-edit 03c9916707f980c2a654ab330db17112b265f7b9
+git -C "$CORE_REPO" log --format='%H' 695e0079dc25f7a909f2a1dcd8300114ba87f063..HEAD -- docs/migration/06-main-app-validation.md docs/migration/evidence/task-5-command-ledger.md |
+while IFS= read -r task5_evidence_commit; do
+  test -n "$task5_evidence_commit" || continue
+  git -C "$CORE_REPO" revert --no-edit "$task5_evidence_commit"
+done
+
 git -C "$MAIN_REPO" revert --no-edit 280145c1e029ccf967453d1e17c4ea506570611a
 ```
 
