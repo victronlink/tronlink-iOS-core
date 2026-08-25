@@ -203,27 +203,28 @@ Example 未过滤的精确四项是：
 
 ## Rollback Sequence
 
-建议按最新到最旧回滚，且每个命令都限定仓库。先发现并回滚本报告 carrier，再回滚
-Task 5 证据与测试：
+建议按最新到最旧回滚，且每个命令都限定仓库。用一次三路径并集发现所有
+Task 5 文档 carrier，确保同时修改多个路径的提交只回滚一次，再回滚 Main 测试：
 
 ```bash
 CORE_REPO=/Users/viccc/source/tronlink-iOS-core
 MAIN_REPO=/Users/viccc/working/4_22_0/TronLink_iOS
 
-git -C "$CORE_REPO" log --format='%H' 03c9916707f980c2a654ab330db17112b265f7b9..HEAD -- docs/migration/07-final-report.md |
-while IFS= read -r final_report_commit; do
-  test -n "$final_report_commit" || continue
-  git -C "$CORE_REPO" revert --no-edit "$final_report_commit"
-done
-
-git -C "$CORE_REPO" log --format='%H' 695e0079dc25f7a909f2a1dcd8300114ba87f063..HEAD -- docs/migration/06-main-app-validation.md docs/migration/evidence/task-5-command-ledger.md |
-while IFS= read -r task5_evidence_commit; do
-  test -n "$task5_evidence_commit" || continue
-  git -C "$CORE_REPO" revert --no-edit "$task5_evidence_commit"
+git -C "$CORE_REPO" log --format='%H' 695e0079dc25f7a909f2a1dcd8300114ba87f063..HEAD -- docs/migration/06-main-app-validation.md docs/migration/07-final-report.md docs/migration/evidence/task-5-command-ledger.md |
+while IFS= read -r task5_docs_commit; do
+  test -n "$task5_docs_commit" || continue
+  git -C "$CORE_REPO" revert --no-edit "$task5_docs_commit"
 done
 
 git -C "$MAIN_REPO" revert --no-edit 280145c1e029ccf967453d1e17c4ea506570611a
 ```
+
+修正 carrier 产生前，在独立临时 clone 中以 Core
+`0343feb1b1e4633c67588ab38a86da099622cd0d` 实际执行上述 Core 循环。发现顺序精确为
+`0343feb` → `3f4b22d` → `e0b1110` → `2451f0e` → `03c9916`，循环 exit 0；
+回滚后三个路径相对 `695e0079dc25f7a909f2a1dcd8300114ba87f063` 的 diff 为 0 行，
+临时 clone 工作区也为 0 行。当前及以后修改这三个路径的 carrier 会被同一
+union-path discovery 自动排在更旧提交之前，无需硬编码自身 SHA。
 
 继续撤销生产迁移时，按各阶段报告的 repo-qualified 命令逆序执行。生产边界核心顺序
 是 Main `c641762a…` / Core `9e535d3c…`，Main `45b4b601…`、`b87d495e…` /

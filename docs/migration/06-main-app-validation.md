@@ -265,21 +265,29 @@ Task 4 committed evidence 对 untracked 的可用 provenance 是“既有 untrac
 
 ## Rollback Commits
 
-Task 5 文档提交不能在自身内容中硬编码自身 SHA。先按路径限定发现 Task 5 文档
-carrier commits，再回滚 Main 的单测提交；命令明确限定仓库：
+Task 5 文档提交不能在自身内容中硬编码自身 SHA。用一次三路径并集发现
+Task 5 文档 carrier commits，确保同时修改多个路径的提交只回滚一次，再回滚
+Main 的单测提交；命令明确限定仓库：
 
 ```bash
 CORE_REPO=/Users/viccc/source/tronlink-iOS-core
 MAIN_REPO=/Users/viccc/working/4_22_0/TronLink_iOS
 
-git -C "$CORE_REPO" log --format='%H' 695e0079dc25f7a909f2a1dcd8300114ba87f063..HEAD -- docs/migration/06-main-app-validation.md docs/migration/evidence/task-5-command-ledger.md |
-while IFS= read -r task5_stage_commit; do
-  test -n "$task5_stage_commit" || continue
-  git -C "$CORE_REPO" revert --no-edit "$task5_stage_commit"
+git -C "$CORE_REPO" log --format='%H' 695e0079dc25f7a909f2a1dcd8300114ba87f063..HEAD -- docs/migration/06-main-app-validation.md docs/migration/07-final-report.md docs/migration/evidence/task-5-command-ledger.md |
+while IFS= read -r task5_docs_commit; do
+  test -n "$task5_docs_commit" || continue
+  git -C "$CORE_REPO" revert --no-edit "$task5_docs_commit"
 done
 
 git -C "$MAIN_REPO" revert --no-edit 280145c1e029ccf967453d1e17c4ea506570611a
 ```
+
+修正 carrier 产生前，在独立临时 clone 中以 Core
+`0343feb1b1e4633c67588ab38a86da099622cd0d` 实际执行上述 Core 循环。发现顺序精确为
+`0343feb` → `3f4b22d` → `e0b1110` → `2451f0e` → `03c9916`，循环 exit 0；
+回滚后三个路径相对 `695e0079dc25f7a909f2a1dcd8300114ba87f063` 的 diff 为 0 行，
+临时 clone 工作区也为 0 行。当前及以后修改这三个路径的 carrier 会被同一
+union-path discovery 自动排在更旧提交之前，无需硬编码自身 SHA。
 
 执行 rollback 前先确认两个仓库没有会与指定提交冲突的 staged change。Main 用户
 自有 lock/project 与未跟踪文件不属于上述 revert 目标。
