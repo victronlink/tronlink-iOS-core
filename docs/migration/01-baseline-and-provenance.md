@@ -139,7 +139,7 @@ The original combined-command timestamp was `2026-08-25T13:14:24+0800`; it was s
 
 The two unfiltered-suite failures are baseline facts, not migration regressions. The signing test also depends on an external gRPC endpoint. CocoaPods generated ignored `Example/Pods`, `Example/Podfile.lock`, and workspace artifacts. The main app had user-owned dirty files before the stage; they remain unchanged.
 
-Rollback, from newest to oldest, is `git revert 50f03c6418b34bad45f3d16931d00bc697404aad` for the original stage report and `git revert 2f15afc85c09b06cff9bc9d2f897b13968d808db` for immutable vectors/manifests. This evidence-retention amendment must be reverted by its own commit identifier. No rollback action is required in the main app.
+Rollback, from newest to oldest, is `git revert 094ddd2fa58bc24650db140b6ab60d9142d68d91` for the evidence-retention amendment, `git revert 50f03c6418b34bad45f3d16931d00bc697404aad` for the original stage report, and `git revert 2f15afc85c09b06cff9bc9d2f897b13968d808db` for immutable vectors/manifests. No rollback action is required in the main app.
 
 ## Stage 1 Entry Gate
 
