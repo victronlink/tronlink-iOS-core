@@ -4,6 +4,17 @@ This is the durable chronological execution record for Task 3. Times are
 Singapore time (`+0800`) on 2026-08-25. No result is inferred when a command or
 artifact does not provide it.
 
+## xcresult hash policy
+
+Every xcresult whole-tree hash recorded below is a point-in-time diagnostic
+snapshot, not a reproducible gate. Running `xcresulttool get test-results`
+creates or updates mutable `TestReport` cache files inside the bundle, so a
+later whole-tree hash can change even though the result nodes and test counts
+do not. Task 3 acceptance relies on literal commands, stable tee-log SHA-256
+values, and `xcresulttool get test-results summary` or `tests` result-node
+queries. None of the xcresult tree hashes below is used as a repeatable
+acceptance condition.
+
 ## Fixed repositories and pins
 
 | Item | Value |
@@ -43,7 +54,7 @@ exit "$TLCORE_TASK3_RED_EXIT"
 | `17:43:03`–`17:44:20` | core Example | `C-RED`, with only `-derivedDataPath /tmp/tlcore-stage-3-red-valid` and tee path `/tmp/tlcore-stage-3-red-valid.log` changed | 65; **accepted RED**. Missing `TLCore.PrivateKey`, `Web3Utils`, `ABIv2TypeParser`, `ABIv2Encoder`, `ABIv2Decoder`, and `ABIv2`, plus direct contextual cascades only. No test executed. |
 | after `17:44:20` | core | `find /tmp/tlcore-stage-3-red-valid/Logs/Test -maxdepth 1 -type d -name '*.xcresult' -print \| sort; shasum -a 256 /tmp/tlcore-stage-3-red-valid.log; wc -l /tmp/tlcore-stage-3-red-valid.log; rg -o "(module 'TLCore' has no member named '[^']+'\|No type named '[^']+' in module 'TLCore'\|Type 'Any' has no member '[^']+'\|Cannot infer contextual base in reference to member '[^']+'\|Generic parameter '[^']+' could not be inferred)" /tmp/tlcore-stage-3-red-valid.log \| sort -u` | 0. Log available, 2,151 lines, SHA-256 `b7846de227a3043208d241b256c07f1116067ecd5bf748f498181d4a9b275bd1`; unique diagnostics exactly match the accepted RED set. |
 | after `17:44:20` | core | `du -sh /tmp/tlcore-stage-3-red-valid/Logs/Test/Test-tronlink-iOS-core_Tests-2026.08.25_17-43-03-+0800.xcresult; (cd /tmp/tlcore-stage-3-red-valid/Logs/Test/Test-tronlink-iOS-core_Tests-2026.08.25_17-43-03-+0800.xcresult && find . -type f -print0 \| sort -z \| xargs -0 shasum -a 256 \| shasum -a 256 \| awk '{print $1}')` | 0. Artifact available, 724 KiB, tree-content SHA-256 `27484ace99a2bd8c12f898632c76ec3ae2565062752377e0f71e3a5a1e884b97`. |
-| after `17:44:20` | core | Bulk mechanical `mkdir -p`, `cp`, and path-only `mv` import command using the 45-file secp tree, exact 19-file Web3 whitelist, and two licenses from the pinned clean worktrees | 0. `secp_files=45`, `web3_pinned_files=19`; upstream/renamed C SHA-256 both `335ffe244402cd7b228a38cad9b43f7c7a3da511c36aecaacb5206996def154d`. The full literal command is preserved in the task transcript; every input and destination is enumerated in the final report. |
+| after `17:44:20` | core | Bulk mechanical `mkdir -p`, `cp`, and path-only `mv` import command using the 45-file secp tree, exact 19-file Web3 whitelist, and two licenses from the pinned clean worktrees | 0. `secp_files=45`, `web3_pinned_files=19`; upstream/renamed C SHA-256 both `335ffe244402cd7b228a38cad9b43f7c7a3da511c36aecaacb5206996def154d`. The reproducible literal import command and the complete 45-path destination/source/checksum manifest are committed in `docs/migration/04-web3-secp-migration.md`; they do not depend on an external transcript. |
 | after import | core | `find tronlink-iOS-core/Classes/Web3Subset -type f -name '*.swift' -print0 \| xargs -0 perl -pi -e 's/\bAddressError\b/Web3AddressError/g; s/\bAddress\b/Web3Address/g'; printf 'remaining_address_tokens='; rg -n '\b(AddressError\|Address)\b' tronlink-iOS-core/Classes/Web3Subset \| wc -l` | 0. Mechanical rename left zero old address tokens. |
 | after import | core | Initial upstream utility-location scan with `rg` against `.../Classes/Web3+Structures.swift` and `.../Classes/Web3+Utils.swift` | 2. Invalid read-only path assumption; actual pinned files are below `Classes/Web3/`. No source conclusion. |
 | after correction | core | Corrected `rg`/`sed` inspection against pinned `Classes/Web3/Web3+Structures.swift`, `Web3+Utils.swift`, `Web3.swift`, and whitelisted source files | 0. Located the exact approved utility/error/EventLog fields and source adaptation blocks. |
@@ -116,3 +127,17 @@ exit "$TLCORE_TASK3_RED_EXIT"
 | after acceptance | core | Mechanical file, dependency, import, header, type, and symbol scans | 0. Exactly 45 secp and 21 Web3Subset files; zero old imports/dependencies; one public Trezor `ecdsa.h`; zero per-architecture duplicate `secp256k1_*`/`ecdsa_*` exported names. Literal archive `nm -gU | sort | uniq -d` has 18 Swift/profile archive rows, artifact SHA-256 `6c0b185cd0978175232cb4c64a1844fe1887fae93f7896b06af60d66276932a5`, and is classified in the migration report. |
 | after acceptance | core | `git commit -m "refactor: embed the required Web3 and secp256k1 APIs"` | 0; commit `7f20566c229c82c6abe731f0e941addcbcdaf17a`. Ledger/report excluded. |
 | after core commit | main | Selectively stage Podfile, 11 source files, and only six old-framework project hunks; `git diff --cached --check`; commit | 0; commit `b87d495eaac377a9ade9f3b6baa2710696a76b85`. `Podfile.lock` and pre-existing GasFree project reorder remain unstaged. |
+
+## Review-fix reproducibility validation
+
+| Working directory | Literal command | Exit/result |
+| --- | --- | --- |
+| main | `ruby -e 'p=File.read("Podfile"); abort "RED: Podfile still allows the published TLCore version" if p.match?(/pod\s+[\x27\x22]tronlink-iOS-core[\x27\x22]\s*,\s*[\x27\x22]1\.0\.7[\x27\x22]/); abort "RED: Podfile does not require TLCORE_LOCAL_PATH" unless p.include?("TLCORE_LOCAL_PATH")'` | 1 before the fix because the published 1.0.7 declaration remained. |
+| main | `env -u TLCORE_LOCAL_PATH pod install --no-repo-update` | 1 with the intended English missing-path error while evaluating the Podfile. |
+| main | `TLCORE_LOCAL_PATH='   ' pod install --no-repo-update` | 1 with the intended English missing-path error. |
+| main | `TLCORE_LOCAL_PATH=/tmp/tlcore-does-not-exist-review pod install --no-repo-update` | 1 with the intended English non-directory error. |
+| main | `TLCORE_LOCAL_PATH=/Users/viccc/source/tronlink-iOS-core pod install 2>&1 \| tee /tmp/tlcore-stage-3-review-main-pod-install.log` | 0. Local TLCore installed; log SHA-256 `74378b50678184cb09877e12152d5ca9c39f5cc7ecc12fe2fe838e43515453bd`. |
+| main | `rg -n '(^\|[/ -])(web3swift\|Web3\|secp256k1\.swift)([/ (:]\|$)\|from:.*(web3swift\|secp256k1)' Podfile.lock Pods/Manifest.lock \|\| true` | 0 with no matches for standalone old Web3/secp dependency products. |
+| main | `set -o pipefail; TLCORE_LOCAL_PATH=/Users/viccc/source/tronlink-iOS-core xcodebuild -quiet -workspace TronLink.xcworkspace -scheme TronLink -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/tlcore-stage-3-review-main-build CODE_SIGNING_ALLOWED=NO build 2>&1 \| tee /tmp/tlcore-stage-3-review-main-build-confirm.log` | **0, BUILD GREEN**. Log SHA-256 `460f5e99a6575baab1064d537a44cebb48aa9817ccd06fa20bcf11c2b2621366`. |
+| main | `shasum -a 256 Podfile.lock TronLink.xcodeproj/project.pbxproj` after restoring validation-only lockfile output | 0. User-owned lockfile restored to `3513cae6cf97a837f66a04240feb143fbc826701786f9ceb93652bfcf9921c65`; project including the unrelated GasFree diff remained `739e70443445ad475c46dc5bfc49a688dbde923657b1221ce29a9a56ae3b12f8`. Both remain unstaged. |
+| main | `git add Podfile && git diff --cached --name-only && git diff --cached --check && git commit -m 'fix: require local TLCore checkout for migration'` | 0. Cached path was exactly `Podfile`; commit `45b4b6019de1b93c07eae13ee587d5bd948ecaab`. |
