@@ -232,3 +232,32 @@ cp /tmp/task5-main-start-project.pbxproj /Users/viccc/working/4_22_0/TronLink_iO
 
 Main 未跟踪的 `.agents/`、`AGENTS.md`、`BASIC_MODE_API_INVENTORY.md`、`outputs/`、
 `reports/`、`scripts/assert_entropy_source.sh` 均保留；Task 5 没有把它们加入 index。
+
+## 最终 history/worktree 审计
+
+在 `07-final-report.md` 的独立 carrier commit
+`2451f0e6584d28a02407cd61329393c6d27972ee` 创建后，逐字执行计划要求的六条命令：
+
+```bash
+git -C /Users/viccc/source/tronlink-iOS-core status --short --ignored docs/migration docs/superpowers
+git -C /Users/viccc/source/tronlink-iOS-core log --oneline --decorate -8
+git -C /Users/viccc/working/4_22_0/TronLink_iOS status --short
+git -C /Users/viccc/working/4_22_0/TronLink_iOS log --oneline --decorate -8
+git -C /Users/viccc/source/tronlink-iOS-core log --all -- docs/migration/00-single-tlcore-design.md docs/migration/00-design-audit.md docs/superpowers/plans/2026-08-25-single-tlcore-migration.md
+git -C /Users/viccc/source/tronlink-iOS-core ls-files -- docs/migration/00-single-tlcore-design.md docs/migration/00-design-audit.md docs/superpowers/plans/2026-08-25-single-tlcore-migration.md
+```
+
+- timestamp：`2026-08-26T01:56:15+0800`；组合 shell exit 0。
+- Core 顶部是 `2451f0e`、`03c9916`；Main 顶部是 `280145c1e`。
+- Core status 仅显示三个预期 ignored 路径：`00-design-audit.md`、
+  `00-single-tlcore-design.md`、`docs/superpowers/`。
+- Main status 仅保留起始用户 dirty `Podfile.lock`、project 和已列出的未跟踪路径。
+- 最后两条 design-history/index 命令均为**空输出**，证明三个设计/计划路径未进入
+  任何 Git history 或 index。
+- 输出：`/tmp/task5-final-history-audit.log`，1,275 bytes，
+  `mtime=2026-08-26T01:56:15+0800`，SHA-256
+  `e07e8fb6f346be6e095958cb209ab915205c5a96e0af9e73b707d61595c54734`。
+
+本节必然晚于原始 Stage 5 证据提交和 final-report carrier，因此由单独的 docs-only
+审计提交承载；`06-main-app-validation.md` 的 path-limited rollback 会按最新到最旧
+发现本次台账修订与原始 `03c9916`。
