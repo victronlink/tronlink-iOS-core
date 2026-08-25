@@ -23,11 +23,13 @@ intermediate state.
 
 ## Fidelity
 
-At `2026-08-25T14:43:36+0800`, the following fail-fast check exited 0. It
-asserted the pinned upstream checkout, compared every one of the 123 permitted
-class-source mappings (with the Objective-C relocation), compared both license
-copies, and asserted a total of 125 mappings. A missing path or the first byte
-mismatch terminates the command with exit 1.
+At `2026-08-25T14:47:13+0800`, the following fail-fast check exited 0. It
+asserted the pinned upstream HEAD, listed each permitted path from the pinned
+tree, and streamed each pinned commit blob directly into `cmp`; neither tracked
+nor untracked upstream worktree pollution can influence a comparison. It
+compared all 123 class-source mappings (with the Objective-C relocation), both
+license copies, and asserted a total of 125 mappings. A missing target or the
+first byte mismatch terminates the command with exit 1.
 
 ```bash
 set -euo pipefail
@@ -46,24 +48,23 @@ while IFS= read -r TLCORE_PATH; do
       TLCORE_DESTINATION="$TLCORE_STAGED/${TLCORE_PATH#TronWalletABI/Classes/}" ;;
     *) printf 'unexpected source path: %s\n' "$TLCORE_PATH" >&2; exit 1 ;;
   esac
-  TLCORE_SOURCE="$TLCORE_UPSTREAM_REPO/$TLCORE_PATH"
-  test -f "$TLCORE_SOURCE" && test -f "$TLCORE_DESTINATION" || {
-    printf 'missing mapping: %s -> %s\n' "$TLCORE_SOURCE" "$TLCORE_DESTINATION" >&2; exit 1;
+  test -f "$TLCORE_DESTINATION" || {
+    printf 'missing destination: %s\n' "$TLCORE_DESTINATION" >&2; exit 1;
   }
-  cmp -s "$TLCORE_SOURCE" "$TLCORE_DESTINATION" || {
-    printf 'mismatch: %s -> %s\n' "$TLCORE_SOURCE" "$TLCORE_DESTINATION" >&2; exit 1;
+  git -C "$TLCORE_UPSTREAM_REPO" show "$TLCORE_PINNED:$TLCORE_PATH" | cmp -s - "$TLCORE_DESTINATION" || {
+    printf 'mismatch: %s -> %s\n' "$TLCORE_PINNED:$TLCORE_PATH" "$TLCORE_DESTINATION" >&2; exit 1;
   }
   TLCORE_SOURCE_COUNT=$((TLCORE_SOURCE_COUNT + 1))
 done < <(git -C "$TLCORE_UPSTREAM_REPO" ls-tree -r --name-only "$TLCORE_PINNED" -- TronWalletABI/Classes)
 test "$TLCORE_SOURCE_COUNT" -eq 123 || { printf 'unexpected source count: %s\n' "$TLCORE_SOURCE_COUNT" >&2; exit 1; }
-cmp -s "$TLCORE_UPSTREAM_REPO/LICENSE" "$TLCORE_LICENSE_DIR/TronWalletABI-LICENSE" || { printf 'outer license mismatch\n' >&2; exit 1; }
-cmp -s "$TLCORE_UPSTREAM_REPO/TronWalletABI/Classes/TrezorCrypto/trezor-crypto/LICENSE" "$TLCORE_LICENSE_DIR/trezor-crypto-LICENSE" || { printf 'Trezor license mismatch\n' >&2; exit 1; }
+git -C "$TLCORE_UPSTREAM_REPO" show "$TLCORE_PINNED:LICENSE" | cmp -s - "$TLCORE_LICENSE_DIR/TronWalletABI-LICENSE" || { printf 'outer license mismatch\n' >&2; exit 1; }
+git -C "$TLCORE_UPSTREAM_REPO" show "$TLCORE_PINNED:TronWalletABI/Classes/TrezorCrypto/trezor-crypto/LICENSE" | cmp -s - "$TLCORE_LICENSE_DIR/trezor-crypto-LICENSE" || { printf 'Trezor license mismatch\n' >&2; exit 1; }
 TLCORE_TOTAL_COUNT=$((TLCORE_SOURCE_COUNT + 2))
 test "$TLCORE_TOTAL_COUNT" -eq 125 || { printf 'unexpected total count: %s\n' "$TLCORE_TOTAL_COUNT" >&2; exit 1; }
 printf 'verified=%s source_mappings=%s license_mappings=2 total_mappings=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$TLCORE_SOURCE_COUNT" "$TLCORE_TOTAL_COUNT"
 ```
 
-Its output was `verified=2026-08-25T14:43:36+0800 source_mappings=123
+Its output was `verified=2026-08-25T14:47:13+0800 source_mappings=123
 license_mappings=2 total_mappings=125`. The Solidity directory comparison also
 exited 0:
 
