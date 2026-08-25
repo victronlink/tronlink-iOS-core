@@ -163,7 +163,11 @@ skip-only 日志 SHA-256 为
 `9e9fc5b4da443e2992228090d31b2fb5eb4e2acfcae5e3dbfbba318c3e1fe530`。
 从两份日志提取的唯一 started 条目分别是 49 和 48；集合差恰好只有该陈旧断言，
 证明所有 intended selector 都实际执行。完整命令、xcresult 和清单 SHA 见 Task 5
-台账。
+台账。SPEC review 只读重提取分别得到相同 SHA
+`97664ce13b6158463ca9d8ffd60561cf7b69fc8ec3a4f82154b0f72e5a65277e` 与
+`94516a14aaf6e5ce12836a37b13ca1ad05c8e32ba2644c78a9440113a7630d2f`；`comm`
+得到 unfiltered-only 1 行、skip-only 0 行，两个 expected-set `cmp` 及与原清单的两个
+`cmp` 全为 0。
 
 ## Debug Simulator Build
 
@@ -185,12 +189,19 @@ archive。日志 `/tmp/task5-main-release-device-build.log` 的 SHA-256 为
 ## Import and Qualified-Name Scan
 
 对 Main `TronLink` 与 `TronLinkTests` 扫描旧 import、selective import 与旧模块限定名：
-0 matches。Release build tree 中旧 framework directory：0。没有把 TLCore 自身合法的
-`secp256k1.h` header 名误报成旧 module。
+0 matches。Revision wrapper 显式捕获 `rg exit=1`、`tee exit=0`、0 rows，避免将
+`tee` 的 0 错当成 `rg` 的状态。Release build tree 中旧 framework directory：0，
+`find/sort/tee` 各段均 exit 0。没有把 TLCore 自身合法的 `secp256k1.h` header 名
+误报成旧 module。
 
 Device TLCore 的 `secp256k1_*`/`ecdsa_*` defined symbols 为 55 个 unique、0 duplicate；
 arm64 App 最终链接没有 duplicate-symbol error。组合扫描日志 SHA-256 为
-`277ff26b58af372ab52f41c24b58e1d25269b5a0ab1347beb74fcc03d9696e75`。
+`277ff26b58af372ab52f41c24b58e1d25269b5a0ab1347beb74fcc03d9696e75`。Revision
+wrapper 用两条完整 `nm -gjU | rg | sort` pipeline 分别生成 55 行 unique list 与
+0 行 duplicate list，SHA-256 分别为
+`2ffb61709a9739f5648464caa5ddd6fcf66ce3a1b3b480a5f99e676b065dd3cd`、
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`；同时重新确认
+TLCore 是 arm64 static archive、App 是 arm64 Mach-O。
 
 ## Resolved Dependency Scan
 
@@ -199,19 +210,34 @@ arm64 App 最终链接没有 duplicate-symbol error。组合扫描日志 SHA-256
 `1ec58bfc333a9d4175cbaebb5d7035892858e93e9ed2c1b5ddb39e00795648a1`。
 对 `TronWalletABI`、`TronWalletKeystore`、`TronWalletWeb3Swift`、
 `tron-wallet-secp256k1`、`PromiseKit`、`scrypt.c` 的扫描为 0 matches。
+Revision wrapper 显式记录该 `rg exit=1`、`tee exit=0`、0 rows。
 
 ## Existing Dirty Files Preserved
 
-Main 的两个用户自有 tracked dirty 文件在 CocoaPods 运行后恢复到 Task 5 起始字节：
+Main 的两个用户自有 tracked dirty 文件以 accepted Task 4 的 immutable evidence
+作为真正 pre-Task-5 ownership baseline。Task 5 当时保存的 `/tmp/task5-main-start-*`
+mtime 是 `01:10:41`，晚于类型测试添加及首次 Manifest infrastructure failure
+（日志 mtime `01:10:34`），且 status 已包含测试文件修改；因此它们只是
+pod-install 前操作中快照，不能称为 strict pre-action snapshot。
 
-| 文件 | 起始/最终文件 SHA-256 | 起始/最终逐文件 diff SHA-256 | `cmp` |
+最终 live 文件的 SHA 与 full `git diff --binary` SHA 逐项等于 Task 4 baseline：
+
+| 文件 | Task 4 baseline / 最终文件 SHA-256 | Task 4 baseline / 最终 full-diff SHA-256 | 与操作中快照 `cmp` |
 | --- | --- | --- | ---: |
 | `Podfile.lock` | `3513cae6cf97a837f66a04240feb143fbc826701786f9ceb93652bfcf9921c65` | `af0938ab42ec83a2ec8915d4aeb7c5efbb7a483e842e4070c4b9fa6df3c32896` | 0 |
 | `TronLink.xcodeproj/project.pbxproj` | `739e70443445ad475c46dc5bfc49a688dbde923657b1221ce29a9a56ae3b12f8` | `d015ab9f57155ccf26b30347515440ac0a7d81a5b8009150a13f0d14ea17fa60` | 0 |
 
-`.agents/`、`AGENTS.md`、`BASIC_MODE_API_INVENTORY.md`、`outputs/`、`reports/`、
-`scripts/assert_entropy_source.sh` 与其他未跟踪内容均未暂存或修改。恢复证明日志
-SHA-256 为 `a9939ffef3deadcb2a1463e07f6d5388573f251d6beba02fe9cbc0135d520d12`。
+Task 4 committed evidence 对 untracked 的可用 provenance 是“既有 untracked 文件均未
+暂存”，没有提交 exact path inventory。最早保留的 exact Task 5 清单来自上述
+01:10:41 操作中 status；其 `--untracked-files=all` 46 项与最终 46 项逐字节一致，
+`cmp=0`，两份清单 SHA-256 均为
+`45ee828dd788aad57dcd5108da0d1c741c56bab54d3b308b04b0b98584caccda`。这准确证明
+操作中时点之后未增删用户路径，但不伪造缺失的 pre-action 46-path snapshot。
+
+原恢复日志 SHA-256 为
+`a9939ffef3deadcb2a1463e07f6d5388573f251d6beba02fe9cbc0135d520d12`；SPEC review
+只读 revision log SHA-256 为
+`86c1e2a83354890f21b7fe320884157fd9ef58510134e8f6709d91b97e140caa`。
 
 ## Deviations and Residual Risks
 
@@ -219,6 +245,10 @@ SHA-256 为 `a9939ffef3deadcb2a1463e07f6d5388573f251d6beba02fe9cbc0135d520d12`�
   对照。因此未过滤 49 项保留唯一已裁定失败，再用 exact skip 证明其余 48/48。
 - focused 首次运行因 CocoaPods Manifest 不同步失败；本地 core 解析后同一 selector
   通过。这是完整保留的基础设施重试，不计为产品 RED。
+- 原 Task 5 文档曾把 01:10:41 操作中快照称为起始/pre-action snapshot；本修订按
+  mtime 与已含测试修改的 status 纠正时间线，并将真正 ownership baseline 锚定到
+  accepted Task 4 Core `695e007…` / Main `c641762…` evidence。没有倒推或伪造缺失
+  的更早 Task 5 snapshot。
 - `testCreateHDWalletPrivateKey` 当前方法体全注释；private-key export 的有效 App
   断言来自 `testUpdateWalletReportsSuccessOnlyAfterNewPasswordWorks`，并由 Core golden
   补强。

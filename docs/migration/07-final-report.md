@@ -34,6 +34,13 @@ git -C /Users/viccc/source/tronlink-iOS-core log --format='%H %s' 03c9916707f980
 Task 5 的 Main 提交只修改 `TronLinkTests/TronLinkTests.swift`，增加一个覆盖四项类型
 边界的测试；没有提交用户自有 lock/project 或生产代码。
 
+用户文件的真正 pre-Task-5 ownership baseline 来自 accepted Task 4：Core
+`695e0079dc25f7a909f2a1dcd8300114ba87f063` / Main
+`c641762a5502b28478b555b75c51d14f5cc29f39` 已提交证据中的 file SHA 与 full-diff
+SHA。Task 5 的 `/tmp/task5-main-start-*` 实际在类型测试添加及首次 Manifest
+infrastructure failure 之后、pod install 与任何 Task 5 commit 之前才保存；它们仅是
+操作中恢复辅助快照，不再被称为 strict pre-action snapshot。
+
 ## Embedded Source Baselines
 
 | Source | 固定 commit | Tag | 基线 manifest 条目 |
@@ -176,6 +183,12 @@ RLP/transaction implementations、contracts、EIP67、ENS/BIP67、ERC721/ERC777�
 | device old framework scan | 0 | PASS |
 | device TLCore secp/ecdsa | 55 unique，0 duplicate | PASS |
 
+SPEC review 的只读 revision wrapper 于 `2026-08-26T02:12:36+0800` 至
+`02:12:36+0800` 执行并 exit 0；日志 SHA-256 为
+`86c1e2a83354890f21b7fe320884157fd9ef58510134e8f6709d91b97e140caa`。它显式保留
+零匹配 `rg exit=1`、49/48 started set 的 `comm/cmp`、55/0 symbol list、架构、
+Task 4 ownership 四个 SHA、46/46 exact untracked set 与 design history/index 结果。
+
 Example 未过滤的精确四项是：
 
 - `EmbeddedKeystoreTests.testKeystoreKeyRejectsAllPrintableASCIIInput()`
@@ -239,7 +252,8 @@ path-limited discovery 命令先行回滚。
 | duplicate C-symbol scan | PASS | secp/ecdsa 55 unique、0 duplicate |
 | 旧 framework 产物 | PASS | device build tree 0 |
 | 忽略的设计/计划文件未进入 Git history/index | PASS | 最终 `git log --all -- <3 paths>` 与 `git ls-files -- <3 paths>` 均无输出 |
-| Main 用户 dirty 文件保持 | PASS | live file SHA、full diff SHA、`cmp` 全部与起始快照一致 |
+| Main 用户 tracked dirty 文件保持 | PASS | live file SHA 与 full-diff SHA 全部等于 immutable Task 4 ownership baseline；与较晚的 pod-install 前操作中快照 `cmp=0` 仅作辅助 |
+| Main 用户 untracked 路径保持 | PASS（有 provenance 边界） | 最早保留的 exact 操作中清单与最终均为 46 项且 `cmp=0`；Task 4 只提交了“既有 untracked 未暂存”的概括，未伪造缺失的 strict pre-action path inventory |
 
 保留风险：Main 缺少可离线的完整 cold-wallet/multisig、transaction/message signing
 端到端 XCTest；现有对应方法依赖 live network、为空或真正 sign 调用被注释。当前
