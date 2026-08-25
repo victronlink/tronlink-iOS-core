@@ -23,9 +23,49 @@ intermediate state.
 
 ## Fidelity
 
-At `2026-08-25T14:38:34+0800`, a path-by-path `cmp -s` check covered 125
-mapping pairs: 123 staged ABI files and the two copied license files. The
-Solidity directory comparison also exited 0:
+At `2026-08-25T14:43:36+0800`, the following fail-fast check exited 0. It
+asserted the pinned upstream checkout, compared every one of the 123 permitted
+class-source mappings (with the Objective-C relocation), compared both license
+copies, and asserted a total of 125 mappings. A missing path or the first byte
+mismatch terminates the command with exit 1.
+
+```bash
+set -euo pipefail
+TLCORE_UPSTREAM_REPO=/Users/viccc/source/tronlink-iOS-core-others/tron-wallet-abi
+TLCORE_PINNED=c367023e0e141f414c9319c2ccb382eda396f2a4
+TLCORE_STAGED=/Users/viccc/source/tronlink-iOS-core/tronlink-iOS-core/Classes/ABI
+TLCORE_LICENSE_DIR=/Users/viccc/source/tronlink-iOS-core/ThirdPartyLicenses
+test "$(git -C "$TLCORE_UPSTREAM_REPO" rev-parse HEAD)" = "$TLCORE_PINNED"
+TLCORE_SOURCE_COUNT=0
+while IFS= read -r TLCORE_PATH; do
+  case "$TLCORE_PATH" in
+    TronWalletABI/Classes/TronCore-umbrella.h) continue ;;
+    TronWalletABI/Classes/EthereumCrypto.h|TronWalletABI/Classes/EthereumCrypto.m)
+      TLCORE_DESTINATION="$TLCORE_STAGED/ObjectiveC/${TLCORE_PATH##*/}" ;;
+    TronWalletABI/Classes/*)
+      TLCORE_DESTINATION="$TLCORE_STAGED/${TLCORE_PATH#TronWalletABI/Classes/}" ;;
+    *) printf 'unexpected source path: %s\n' "$TLCORE_PATH" >&2; exit 1 ;;
+  esac
+  TLCORE_SOURCE="$TLCORE_UPSTREAM_REPO/$TLCORE_PATH"
+  test -f "$TLCORE_SOURCE" && test -f "$TLCORE_DESTINATION" || {
+    printf 'missing mapping: %s -> %s\n' "$TLCORE_SOURCE" "$TLCORE_DESTINATION" >&2; exit 1;
+  }
+  cmp -s "$TLCORE_SOURCE" "$TLCORE_DESTINATION" || {
+    printf 'mismatch: %s -> %s\n' "$TLCORE_SOURCE" "$TLCORE_DESTINATION" >&2; exit 1;
+  }
+  TLCORE_SOURCE_COUNT=$((TLCORE_SOURCE_COUNT + 1))
+done < <(git -C "$TLCORE_UPSTREAM_REPO" ls-tree -r --name-only "$TLCORE_PINNED" -- TronWalletABI/Classes)
+test "$TLCORE_SOURCE_COUNT" -eq 123 || { printf 'unexpected source count: %s\n' "$TLCORE_SOURCE_COUNT" >&2; exit 1; }
+cmp -s "$TLCORE_UPSTREAM_REPO/LICENSE" "$TLCORE_LICENSE_DIR/TronWalletABI-LICENSE" || { printf 'outer license mismatch\n' >&2; exit 1; }
+cmp -s "$TLCORE_UPSTREAM_REPO/TronWalletABI/Classes/TrezorCrypto/trezor-crypto/LICENSE" "$TLCORE_LICENSE_DIR/trezor-crypto-LICENSE" || { printf 'Trezor license mismatch\n' >&2; exit 1; }
+TLCORE_TOTAL_COUNT=$((TLCORE_SOURCE_COUNT + 2))
+test "$TLCORE_TOTAL_COUNT" -eq 125 || { printf 'unexpected total count: %s\n' "$TLCORE_TOTAL_COUNT" >&2; exit 1; }
+printf 'verified=%s source_mappings=%s license_mappings=2 total_mappings=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$TLCORE_SOURCE_COUNT" "$TLCORE_TOTAL_COUNT"
+```
+
+Its output was `verified=2026-08-25T14:43:36+0800 source_mappings=123
+license_mappings=2 total_mappings=125`. The Solidity directory comparison also
+exited 0:
 
 ```bash
 git diff --no-index \
@@ -85,7 +125,20 @@ files were intentionally not reformatted. The two full-suite failures remain
 accepted Stage 0 baseline failures, not regressions from this excluded staging
 change.
 
-To roll back this task after its report commit, revert the documentation commit
-first and then `53da320` (`refactor: stage TronWalletABI sources for
-consolidation`). No rollback is required in the main-app checkout, whose
-pre-existing changes were preserved.
+To roll back Task 1, first inspect documentation-only amendments newer than the
+initial report and revert every displayed commit in the displayed
+newest-to-oldest order:
+
+```bash
+git log --format='%H %s' f19c61e56f081c1be42ea07d40a09fec8e0277a9..HEAD -- docs/migration/02-abi-migration.md .superpowers/sdd/2026-08-25-single-tlcore-migration/task-1-report.md
+```
+
+Then run these fixed commands, in this order:
+
+```bash
+git revert f19c61e56f081c1be42ea07d40a09fec8e0277a9
+git revert 53da320b988d54ae74c969574f5ee6038a2e02c0
+```
+
+No rollback is required in the main-app checkout, whose pre-existing changes
+were preserved.
