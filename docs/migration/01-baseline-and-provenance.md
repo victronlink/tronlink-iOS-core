@@ -54,6 +54,8 @@ The immutable baseline evidence commit is `2f15afc` (`test: capture TLCore migra
 
 Each manifest was checked with `shasum -a 256 -c` from its corresponding source root. The five manifest files contain 356 entries in total.
 
+The original verification timestamps were not captured. A read-only re-verification at `2026-08-25T14:06:24+0800` checked every manifest from its corresponding source root with exit 0: TLCore 57 entries, ABI 124, Keystore 13, Web3Swift 117, and secp256k1 45.
+
 ## Resolved Pod Versions
 
 `pod install --verbose` in `Example` completed with exit 0. `Example/Podfile.lock` was written at `2026-08-25T13:04:01+0800` and is ignored.
@@ -103,20 +105,41 @@ The originally planned mnemonic private-key literal `426e488d2a2edaa1b69e6f3a252
 
 ## Existing Dirty Files Preserved
 
-Before CocoaPods and Xcode, the main app had a 202-line `Podfile.lock` diff and a 36-line `TronLink.xcodeproj/project.pbxproj` diff. The lockfile changes switch the four source pods from `security-optimization` git branches to released pods (including ABI `1.0.3` to `1.0.2`) and change React-related checksums. The project-file diff relocates and adds the existing `TronLinkGasFreeTokenSupport.swift` references. These diffs were captured before the stage and compared after the build with:
+Before CocoaPods and Xcode, the main app had a 202-line `Podfile.lock` diff and a 36-line `TronLink.xcodeproj/project.pbxproj` diff. The complete captured outputs are retained verbatim in [main-app-preexisting-Podfile.lock.diff](evidence/main-app-preexisting-Podfile.lock.diff) and [main-app-preexisting-project.pbxproj.diff](evidence/main-app-preexisting-project.pbxproj.diff). Their SHA-256 values are respectively `c33b5857d2b0bd1620620c518da6c6190323980fbaa2669a1e4d02793b6b9435` and `d404e30e7564666910effcc2d3cb864bbc71f7d32f0d2cf74e041843b9786559`; each committed file was byte-compared against its original `/tmp` capture before commit.
+
+The lockfile changes switch the four source pods from `security-optimization` git branches to released pods (including ABI `1.0.3` to `1.0.2`) and change React-related checksums. The project-file diff relocates and adds the existing `TronLinkGasFreeTokenSupport.swift` references. These diffs were captured before the stage and compared after the build with:
 
 ```bash
 git diff -- Podfile.lock | diff -u /tmp/task-0-preexisting-Podfile.lock.diff -
 git diff -- TronLink.xcodeproj/project.pbxproj | diff -u /tmp/task-0-preexisting-project.pbxproj.diff -
 ```
 
-Both comparisons exited 0. The preserved full snapshots are also recorded in the Task 0 execution report and were not staged in either Stage 0 commit.
+The original combined-command timestamp was `2026-08-25T13:14:24+0800`; it was silent and the shell completed with exit 0. A separate read-only re-verification at `2026-08-25T14:06:24+0800` recorded explicit exit 0 for each comparison. The preserved full snapshots are committed as the evidence files linked above.
+
+## Auditable Execution Log
+
+| Operation | Literal command | Timestamp | Exit status | Concise observed output |
+| --- | --- | --- | ---: | --- |
+| TLCore manifest re-verification | `shasum -a 256 -c docs/migration/manifests/tlcore-1.0.7.sha256 >/dev/null` | `2026-08-25T14:06:24+0800` | 0 | 57 entries verified from `/Users/viccc/source/tronlink-iOS-core`. |
+| ABI manifest re-verification | `shasum -a 256 -c /Users/viccc/source/tronlink-iOS-core/docs/migration/manifests/tron-wallet-abi-1.0.2.sha256 >/dev/null` | `2026-08-25T14:06:24+0800` | 0 | 124 entries verified from `/Users/viccc/source/tronlink-iOS-core-others/tron-wallet-abi`. |
+| Keystore manifest re-verification | `shasum -a 256 -c /Users/viccc/source/tronlink-iOS-core/docs/migration/manifests/tron-wallet-keystore-1.0.5.sha256 >/dev/null` | `2026-08-25T14:06:24+0800` | 0 | 13 entries verified from `/Users/viccc/source/tronlink-iOS-core-others/tron-wallet-keystore`. |
+| Web3Swift manifest re-verification | `shasum -a 256 -c /Users/viccc/source/tronlink-iOS-core/docs/migration/manifests/tron-wallet-web3swift-1.1.2.sha256 >/dev/null` | `2026-08-25T14:06:24+0800` | 0 | 117 entries verified from `/Users/viccc/source/tronlink-iOS-core-others/tron-wallet-web3swift`. |
+| secp256k1 manifest re-verification | `shasum -a 256 -c /Users/viccc/source/tronlink-iOS-core/docs/migration/manifests/tron-wallet-secp256k1-1.0.0.sha256 >/dev/null` | `2026-08-25T14:06:24+0800` | 0 | 45 entries verified from `/Users/viccc/source/tronlink-iOS-core-others/tron-wallet-secp256k1`. |
+| Example dependency install | `pod install --verbose` | not captured; resulting `Example/Podfile.lock` modification time was `2026-08-25T13:04:01+0800` | 0 | Installation completed; resolved pods are listed above. No later `pod install` was run because this evidence-only amendment must not change generated artifacts. |
+| Focused migration vectors | `xcodebuild test -workspace tronlink-iOS-core.xcworkspace -scheme tronlink-iOS-core_Tests -destination 'platform=iOS Simulator,id=017E8DDA-425E-420F-9644-82B896E4907C' -derivedDataPath /tmp/tlcore-stage-0 CODE_SIGNING_ALLOWED=NO -only-testing:tronlink-iOS-core_Tests/SingleModuleMigrationBaselineTests` | `2026-08-25T13:09:34+0800` | 0 | 4 tests, 0 failures, `** TEST SUCCEEDED **`. |
+| Full Example suite | `xcodebuild test -workspace tronlink-iOS-core.xcworkspace -scheme tronlink-iOS-core_Tests -destination 'platform=iOS Simulator,id=017E8DDA-425E-420F-9644-82B896E4907C' -derivedDataPath /tmp/tlcore-stage-0 CODE_SIGNING_ALLOWED=NO` | `2026-08-25T13:11:40+0800` | 65 | 33 tests, 2 failures: local Flickr Base58 decode and external gRPC `WRONG_VERSION_NUMBER` signing path. |
+| Skip-only comparison | `xcodebuild test -workspace tronlink-iOS-core.xcworkspace -scheme tronlink-iOS-core_Tests -destination 'platform=iOS Simulator,id=017E8DDA-425E-420F-9644-82B896E4907C' -derivedDataPath /tmp/tlcore-stage-0 CODE_SIGNING_ALLOWED=NO -skip-testing:tronlink-iOS-core_Tests/Tests/testBase58CheckRoundTripWithFlickrAlphabet -skip-testing:tronlink-iOS-core_Tests/Tests/testSignTransaction` | `2026-08-25T13:13:12+0800` | 0 | 31 tests, 0 failures, `** TEST SUCCEEDED **`. |
+| Main-app baseline build | `xcodebuild -workspace TronLink.xcworkspace -scheme TronLink -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/tronlink-tlcore-stage-0 CODE_SIGNING_ALLOWED=NO build` | `2026-08-25T13:14:09+0800` | 0 | `** BUILD SUCCEEDED **`; compiler and run-script warnings only. |
+| Original Podfile preservation comparison | `git diff -- Podfile.lock \| diff -u /tmp/task-0-preexisting-Podfile.lock.diff -` | `2026-08-25T13:14:24+0800` | aggregate shell exit 0 | Silent comparison; explicit read-only re-verification below returned 0. |
+| Original project preservation comparison | `git diff -- TronLink.xcodeproj/project.pbxproj \| diff -u /tmp/task-0-preexisting-project.pbxproj.diff -` | `2026-08-25T13:14:24+0800` | aggregate shell exit 0 | Silent comparison; explicit read-only re-verification below returned 0. |
+| Podfile preservation re-verification | `git diff -- Podfile.lock \| diff -u /tmp/task-0-preexisting-Podfile.lock.diff -` | `2026-08-25T14:06:24+0800` | 0 | No output; current tracked diff still equals the pre-build snapshot. |
+| Project preservation re-verification | `git diff -- TronLink.xcodeproj/project.pbxproj \| diff -u /tmp/task-0-preexisting-project.pbxproj.diff -` | `2026-08-25T14:06:24+0800` | 0 | No output; current tracked diff still equals the pre-build snapshot. |
 
 ## Risks and Rollback
 
 The two unfiltered-suite failures are baseline facts, not migration regressions. The signing test also depends on an external gRPC endpoint. CocoaPods generated ignored `Example/Pods`, `Example/Podfile.lock`, and workspace artifacts. The main app had user-owned dirty files before the stage; they remain unchanged.
 
-Rollback is `git revert 2f15afc` for immutable vectors/manifests and `git revert` of the documentation commit recorded below. No rollback action is required in the main app.
+Rollback, from newest to oldest, is `git revert 50f03c6418b34bad45f3d16931d00bc697404aad` for the original stage report and `git revert 2f15afc85c09b06cff9bc9d2f897b13968d808db` for immutable vectors/manifests. This evidence-retention amendment must be reverted by its own commit identifier. No rollback action is required in the main app.
 
 ## Stage 1 Entry Gate
 

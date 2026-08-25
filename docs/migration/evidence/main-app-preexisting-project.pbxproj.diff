@@ -1,0 +1,36 @@
+diff --git a/TronLink.xcodeproj/project.pbxproj b/TronLink.xcodeproj/project.pbxproj
+index b5cad3103..ec9362955 100644
+--- a/TronLink.xcodeproj/project.pbxproj
++++ b/TronLink.xcodeproj/project.pbxproj
+@@ -739,6 +739,7 @@
+ 		9EC19AF3E508B63282ED7C11 /* TronLinkUnstakeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC19EFE29BDB0C785DFB9C0 /* TronLinkUnstakeListView.swift */; };
+ 		9FD174D1DB8D525AACAA9165 /* TRXDomainConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA12DF13618359368A3D4499 /* TRXDomainConfig.swift */; };
+ 		A20F1D535A9D6008706DF8BB /* SwapSdkBridgeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = C0013BF3C1C2F6FB97253B65 /* SwapSdkBridgeModule.m */; };
++		A4220A01B4C04F01A0000002 /* TronLinkGasFreeTokenSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4220A01B4C04F01A0000001 /* TronLinkGasFreeTokenSupport.swift */; };
+ 		A48C7638758572055F573F7B /* addr2_TXT8YTFY.json in Resources */ = {isa = PBXBuildFile; fileRef = C3A2DE622ED3CD8AE804112F /* addr2_TXT8YTFY.json */; };
+ 		A50357C4B9C7E5B68967F2C0 /* DeFiStatePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB166D80300D87F282C1473 /* DeFiStatePageView.swift */; };
+ 		A547F05EFB12E58D20B8A3E1 /* DeFiJustLendMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C149C8CFD25D301630AA7F /* DeFiJustLendMapper.swift */; };
+@@ -1013,7 +1014,6 @@
+ 		DD9056BE2CB7F100005C4F80 /* TronLinkGasfreeHomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9056BD2CB7F100005C4F80 /* TronLinkGasfreeHomeViewController.swift */; };
+ 		DD9056C02CB7F131005C4F80 /* TronLinkGasfreeGuideViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9056BF2CB7F131005C4F80 /* TronLinkGasfreeGuideViewController.swift */; };
+ 		DD9056C22CB7F175005C4F80 /* TronLinkGasfreeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9056C12CB7F175005C4F80 /* TronLinkGasfreeViewModel.swift */; };
+-		A4220A01B4C04F01A0000002 /* TronLinkGasFreeTokenSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4220A01B4C04F01A0000001 /* TronLinkGasFreeTokenSupport.swift */; };
+ 		DD9056C42CB7F1CF005C4F80 /* TronLinkGasfreeHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9056C32CB7F1CF005C4F80 /* TronLinkGasfreeHeaderView.swift */; };
+ 		DD9056C62CB7F20D005C4F80 /* TronLinkGasfreeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9056C52CB7F20D005C4F80 /* TronLinkGasfreeModel.swift */; };
+ 		DD9056C82CB8EBCC005C4F80 /* TRXHomeGasFreeTipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9056C72CB8EBCC005C4F80 /* TRXHomeGasFreeTipsView.swift */; };
+@@ -1998,6 +1998,7 @@
+ 		9EC19A26D5EA3B3EFF365A1F /* TronLinkUnstakeListViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TronLinkUnstakeListViewModel.swift; sourceTree = "<group>"; };
+ 		9EC19EFE29BDB0C785DFB9C0 /* TronLinkUnstakeListView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TronLinkUnstakeListView.swift; sourceTree = "<group>"; };
+ 		A3B4C5D60718293A4B5C6D7E /* TronLinkWalletBackupListViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TronLinkWalletBackupListViewModel.swift; sourceTree = "<group>"; };
++		A4220A01B4C04F01A0000001 /* TronLinkGasFreeTokenSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TronLinkGasFreeTokenSupport.swift; sourceTree = "<group>"; };
+ 		A4A76396E17D3903419B9447 /* DeFiSunMapper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeFiSunMapper.swift; sourceTree = "<group>"; };
+ 		A4B5C6D7E8F9012345678ABC /* TronLinkWalletBackupBannerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TronLinkWalletBackupBannerView.swift; sourceTree = "<group>"; };
+ 		A780837F30245A6A8AC6546B /* Pods-TronLinkTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TronLinkTests.release.xcconfig"; path = "Target Support Files/Pods-TronLinkTests/Pods-TronLinkTests.release.xcconfig"; sourceTree = "<group>"; };
+@@ -2302,7 +2303,6 @@
+ 		DD9056BD2CB7F100005C4F80 /* TronLinkGasfreeHomeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TronLinkGasfreeHomeViewController.swift; sourceTree = "<group>"; };
+ 		DD9056BF2CB7F131005C4F80 /* TronLinkGasfreeGuideViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TronLinkGasfreeGuideViewController.swift; sourceTree = "<group>"; };
+ 		DD9056C12CB7F175005C4F80 /* TronLinkGasfreeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TronLinkGasfreeViewModel.swift; sourceTree = "<group>"; };
+-		A4220A01B4C04F01A0000001 /* TronLinkGasFreeTokenSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TronLinkGasFreeTokenSupport.swift; sourceTree = "<group>"; };
+ 		DD9056C32CB7F1CF005C4F80 /* TronLinkGasfreeHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TronLinkGasfreeHeaderView.swift; sourceTree = "<group>"; };
+ 		DD9056C52CB7F20D005C4F80 /* TronLinkGasfreeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TronLinkGasfreeModel.swift; sourceTree = "<group>"; };
+ 		DD9056C72CB8EBCC005C4F80 /* TRXHomeGasFreeTipsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TRXHomeGasFreeTipsView.swift; sourceTree = "<group>"; };
