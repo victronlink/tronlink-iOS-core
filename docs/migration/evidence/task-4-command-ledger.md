@@ -340,6 +340,68 @@ exit "$review_gate_exit"
   protobuf annotation 1；receiver-aware hex collision 0；Swift type duplicate 0；真实
   Objective-C class duplicate 0；合法 `GAPIAnnotationsRoot (DynamicMethods)` category 1；
   C symbol duplicate 0；public `ecdsa.h` 1；两仓旧 resolved dependency 和 target dir 0。
+- modulemap 明细输出 `/tmp/task4-review-modulemaps.txt` 恰好包含
+  `./tronlink-iOS-core/TLCore.modulemap`，37 bytes，mtime
+  `2026-08-26T00:53:07+0800`，SHA-256
+  `517bdc1a3e1a2ad76d9a27f28b19864cbd509fec4d628b7b2cbed7dd21c8e3aa`。
+
+### 完整 selective-import 与版本化依赖集合修订门禁
+
+前一条复核的 import 正则没有包含 Swift selective import 的可选 kind。为验证完整
+计划边界，并把 podspec 的“数量 9”升级为名称与版本的精确集合证明，Core cwd 中
+实际执行了：
+
+```bash
+set -o pipefail
+{
+  printf 'started=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
+  printf 'cwd=%s\n' "$PWD"
+  printf 'old_import_matches\n'
+  old_import_count=$(rg -n '^[[:space:]]*(@testable[[:space:]]+)?import[[:space:]]+((class|struct|enum|protocol|func|var|let|typealias)[[:space:]]+)?(TronCore|TronKeystore|web3swift|tron_wallet_secp256k1|secp256k1)([.]|[[:space:]]|$)' tronlink-iOS-core Example /Users/viccc/working/4_22_0/TronLink_iOS/TronLink /Users/viccc/working/4_22_0/TronLink_iOS/TronLinkTests | tee /tmp/task4-review-full-old-import-matches.txt | wc -l | tr -d ' ')
+  printf 'old_import_count=%s\n' "$old_import_count"
+  printf 'expected_dependencies\n'
+  printf '%s\n' "s.dependency 'BigInt', '3.1.0'" "s.dependency 'CryptoSwift', '1.8.4'" "s.dependency 'SwiftProtobuf', '1.38.1'" "s.dependency 'gRPC', '1.68.1'" "s.dependency 'Protobuf', '3.29.6'" "s.dependency 'gRPC-Core', '1.68.1'" "s.dependency 'gRPC-ProtoRPC', '1.68.1'" "s.dependency 'gRPC-RxLibrary', '1.68.1'" "s.dependency 'FMDB', '2.7.5'" | sort | tee /tmp/task4-review-expected-dependencies.txt
+  printf 'actual_dependencies\n'
+  rg -o "s\.dependency '[^']+', '[^']+'" tronlink-iOS-core.podspec | sort | tee /tmp/task4-review-actual-dependencies.txt
+  cmp /tmp/task4-review-expected-dependencies.txt /tmp/task4-review-actual-dependencies.txt
+  dependency_cmp_exit=$?
+  printf 'dependency_cmp_exit=%s\n' "$dependency_cmp_exit"
+  revision_gate_exit=0
+  test "$old_import_count" = 0 || revision_gate_exit=1
+  test "$dependency_cmp_exit" = 0 || revision_gate_exit=1
+  printf 'finished=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
+  printf 'exit=%s\n' "$revision_gate_exit"
+  exit "$revision_gate_exit"
+} 2>&1 | tee /tmp/task4-review-full-import-dependency-gate.log
+gate_exit=${pipestatus[1]}
+exit "$gate_exit"
+```
+
+- cwd：`/Users/viccc/source/tronlink-iOS-core`。
+- 日志自带 start/finish：`2026-08-26T01:03:07+0800`；exit 0。
+- 完整正则覆盖 Core `tronlink-iOS-core`、`Example`、Main `TronLink` 与
+  `TronLinkTests`，包括可选的 `class|struct|enum|protocol|func|var|let|typealias`；
+  匹配结果 0。
+- 主输出：`/tmp/task4-review-full-import-dependency-gate.log`，27 行、844 bytes，
+  SHA-256 `e7a797b271c2ee29a4a26cba15910990dba4a2ff4fe9214343baab64586fbf31`。
+- import 明细为空：`/tmp/task4-review-full-old-import-matches.txt`，0 bytes，SHA-256
+  `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`。
+- expected 与 actual 文件各 9 行、313 bytes，`cmp` exit 0，SHA-256 均为
+  `46a39aa7c5997554b0fc8b7ea77e232776abc28989d864790757659a52fbc5b9`。
+
+日志中打印的 expected 与 actual 精确集合均为：
+
+```text
+s.dependency 'BigInt', '3.1.0'
+s.dependency 'CryptoSwift', '1.8.4'
+s.dependency 'FMDB', '2.7.5'
+s.dependency 'Protobuf', '3.29.6'
+s.dependency 'SwiftProtobuf', '1.38.1'
+s.dependency 'gRPC', '1.68.1'
+s.dependency 'gRPC-Core', '1.68.1'
+s.dependency 'gRPC-ProtoRPC', '1.68.1'
+s.dependency 'gRPC-RxLibrary', '1.68.1'
+```
 
 ## 产物、架构与符号精确复核
 
