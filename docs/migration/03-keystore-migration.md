@@ -15,6 +15,11 @@ The core commit contains exactly 21 task files. The main commit contains exactly
 47 consumer/test files: 41 production files and 6 test files. Neither main-app
 `Podfile.lock` nor its project file was staged.
 
+The durable chronological evidence, including every consequential command,
+invalid/cancelled runs, exact exit states, terminated identifiers, artifact
+availability, extraction commands, and result-bundle hashes, is in
+[`evidence/task-2-command-ledger.md`](evidence/task-2-command-ledger.md).
+
 ## Source provenance and mapping
 
 The Keystore source came from
@@ -145,6 +150,10 @@ the Stage 0 baselines `Tests/testBase58CheckRoundTripWithFlickrAlphabet` and
 
 `/tmp/tlcore-stage-2-tests/Logs/Test/Test-tronlink-iOS-core_Tests-2026.08.25_15-24-09-+0800.xcresult`
 
+That bundle is no longer present because later runs reused its DerivedData
+directory. The command, exit 65, counts, and exact four identifiers survive in
+the tracked command ledger.
+
 A fully serial comparison skipping exactly those four tests passed 56/56 with
 exit 0 in 892.601 seconds. Its result bundle is:
 
@@ -195,6 +204,10 @@ fix was limited to removing an unused old Core import from
 evidence is:
 
 `/tmp/tronlink-tlcore-stage-2-tests/Logs/Test/Test-TronLink-2026.08.25_15-35-45-+0800.xcresult`
+
+That bundle is no longer present because later runs reused its DerivedData
+directory. The ledger retains all 17 compile diagnostics and the exact
+two-file import correction.
 
 The final comparison excluded only the ruled stale oversized-key assertion and
 passed 38/38 with no skips or retries in 464.532 seconds. Its result bundle is:
@@ -258,7 +271,8 @@ implementation and revert every displayed commit in newest-to-oldest order:
 ```bash
 git -C /Users/viccc/source/tronlink-iOS-core log --format='%H %s' \
   85fd3aac0fa79b8459459248e7b165dedb4927a5..HEAD -- \
-  docs/migration/03-keystore-migration.md
+  docs/migration/03-keystore-migration.md \
+  docs/migration/evidence/task-2-command-ledger.md
 ```
 
 Then revert the two implementation commits in consumer-first order:
