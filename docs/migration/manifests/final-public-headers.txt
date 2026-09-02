@@ -64,7 +64,6 @@ rfc6979.h
 rfc7539.h
 ripemd160.h
 script.h
-secp256k1-wallet.h
 secp256k1.h
 segwit_addr.h
 sha2.h
