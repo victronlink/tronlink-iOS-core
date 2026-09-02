@@ -1,6 +1,4 @@
-8f220c57e7d90a6d5f75dc852462d4ea12f7ac872fa53246ea530a67d5eac518  tronlink-iOS-core/Classes/.DS_Store
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tronlink-iOS-core/Classes/.gitkeep
-69eb497848f3e4522ac0e65db0cf8d7bfc455466b0afdcdccd0ab463d4200a7e  tronlink-iOS-core/Classes/ABI/.DS_Store
 7ad503e8d029b280916aca7f41762953a67430d336dcb4ea37515d5961834144  tronlink-iOS-core/Classes/ABI/Address.swift
 8984a535473315ae61c3afcb9593080182ed4d217fc0a3ddf0384e17e33d77b2  tronlink-iOS-core/Classes/ABI/DataHex.swift
 e9bbc08bd97275e41855c55beeb3f6f8b2f1029a3d32d3b3f84af3238059a5f7  tronlink-iOS-core/Classes/ABI/ObjectiveC/EthereumCrypto.h
@@ -13,7 +11,6 @@ b52fa94571a61683b2603666e64cd713391a3b5923832189c6ca1fb0cf8501dc  tronlink-iOS-c
 50b7ad911ecd65ca3c42791b11c0b728d51fd2be51e651cc9f9b37ef28619371  tronlink-iOS-core/Classes/ABI/Solidity/ERC20Encoder.swift
 1c8fc262438e2bb50c42a895710d23a5b78c8b5cf977b8f642250b5497afadd9  tronlink-iOS-core/Classes/ABI/Solidity/Function.swift
 95b60c2ba54648ec3cc1bb42e58233cb45a95c5e4e93e7a97ae31fc44ea3d20c  tronlink-iOS-core/Classes/ABI/Transaction.swift
-3c581145f037086d82a014ab5774387f09c895092573bfbf9f94924ee397da0c  tronlink-iOS-core/Classes/ABI/TrezorCrypto/.DS_Store
 f298a872b7416ed4be7152dff5304b75f1ad45ac2cf9519132dac841120fac0f  tronlink-iOS-core/Classes/ABI/TrezorCrypto/TrezorCrypto.h
 b53d2eb93806f3d618370726f27eafeb6c279c7a90351297f79e073e49e569be  tronlink-iOS-core/Classes/ABI/TrezorCrypto/trezor-crypto/LICENSE
 3085a4eb1afbc7ba539c56b7b9b7d7efd8cf86e5a3c2f8616ac15056ad2c69d9  tronlink-iOS-core/Classes/ABI/TrezorCrypto/trezor-crypto/address.c
