@@ -2459,13 +2459,17 @@ final class EmbeddedKeystoreTests: XCTestCase {
                 }
             }
             XCTAssertEqual(try fileManager.contentsOfDirectory(atPath: keyDirectory.path).count, 1)
-            // Retrying known metadata failures must not undo an explicit account deletion.
+            // A metadata retry must not allow a second file for an already loaded address.
             var copiedAccount = account
             copiedAccount.url = keyDirectory.appendingPathComponent("metadata-copy.json")
-            try metadataUnavailable.addAccount(account: copiedAccount)
-            try metadataUnavailable.delete(account: copiedAccount, password: password)
-            XCTAssertTrue(metadataUnavailable.accounts.isEmpty)
-            XCTAssertNil(metadataUnavailable.key(for: account.address))
+            XCTAssertThrowsError(try metadataUnavailable.addAccount(account: copiedAccount)) { error in
+                guard case KeyStore.Error.accountAlreadyExists = error else {
+                    return XCTFail("Expected accountAlreadyExists, got \(error)")
+                }
+            }
+            XCTAssertFalse(fileManager.fileExists(atPath: copiedAccount.url.path))
+            XCTAssertEqual(metadataUnavailable.account(for: account.address)?.url, account.url)
+            XCTAssertEqual(try metadataUnavailable.exportMnemonic(account: account, password: password), mnemonic)
             XCTAssertEqual(try Data(contentsOf: account.url), originalJSON)
         }
         let reloaded = try KeyStore(keyDirectory: keyDirectory)
@@ -2522,9 +2526,20 @@ final class EmbeddedKeystoreTests: XCTestCase {
         XCTAssertEqual(try updated.exportMnemonic(account: account, password: newPassword), mnemonic)
         XCTAssertThrowsError(try updated.exportMnemonic(account: account, password: password))
 
-        // Public Account.url may point outside keyDirectory; only the key file is excluded.
+        // An existing address cannot be copied to a second managed path, even outside keyDirectory.
         externalAccount.url = externalDirectory.appendingPathComponent("key.json")
-        try updated.addAccount(account: externalAccount)
+        XCTAssertThrowsError(try updated.addAccount(account: externalAccount)) { error in
+            guard case KeyStore.Error.accountAlreadyExists = error else {
+                return XCTFail("Expected accountAlreadyExists, got \(error)")
+            }
+        }
+        XCTAssertFalse(fileManager.fileExists(atPath: externalAccount.url.path))
+        XCTAssertEqual(updated.account(for: account.address)?.url, account.url)
+
+        // First registration may still use an external URL; only the key file is excluded.
+        let externalStore = try KeyStore(keyDirectory: directory.appendingPathComponent("external-store"))
+        try externalStore.addKey(key: XCTUnwrap(updated.key(for: account.address)))
+        try externalStore.addAccount(account: externalAccount)
         try assertProtected(externalAccount.url)
         let externalJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: externalAccount.url)) as? NSDictionary)
         let savedJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: account.url)) as? NSDictionary)
@@ -2538,12 +2553,84 @@ final class EmbeddedKeystoreTests: XCTestCase {
         try fileManager.setAttributes([.immutable: true], ofItemAtPath: keyDirectory.path)
         do {
             defer { try? fileManager.setAttributes([.immutable: false], ofItemAtPath: keyDirectory.path) }
-            XCTAssertThrowsError(try updated.update(account: externalAccount, password: newPassword, newPassword: "failed-directory-password"))
+            XCTAssertThrowsError(try updated.update(account: account, password: newPassword, newPassword: "failed-directory-password"))
         }
         XCTAssertEqual(updated.accounts.count, 1)
         let recoveredDirectoryURL = URL(fileURLWithPath: keyDirectory.path)
         XCTAssertEqual(try recoveredDirectoryURL.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup, true)
-        XCTAssertEqual(try updated.exportMnemonic(account: externalAccount, password: newPassword), mnemonic)
+        XCTAssertEqual(try updated.exportMnemonic(account: account, password: newPassword), mnemonic)
+    }
+
+    func testExistingAccountCannotLeaveASecondKeyFileThroughAddOrUpdate() throws {
+        let store = try KeyStore(keyDirectory: keyDirectory)
+        let account = try store.import(mnemonic: mnemonic, encryptPassword: password)
+        let originalJSON = try Data(contentsOf: account.url)
+        let originalPrivateKey = try store.exportPrivateKey(account: account, password: password)
+        let hash = Data(repeating: 0x42, count: 32)
+        let signature = try store.signHash(hash, account: account, password: password)
+        var relocated = account
+        relocated.url = keyDirectory.appendingPathComponent("second-key.json")
+
+        XCTAssertThrowsError(try store.addAccount(account: relocated)) { error in
+            guard case KeyStore.Error.accountAlreadyExists = error else {
+                return XCTFail("Expected accountAlreadyExists, got \(error)")
+            }
+        }
+        XCTAssertThrowsError(try store.update(account: relocated,
+                                             password: password,
+                                             newPassword: "rejected-password")) { error in
+            guard case KeyStore.Error.accountAlreadyExists = error else {
+                return XCTFail("Expected accountAlreadyExists, got \(error)")
+            }
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: relocated.url.path))
+        XCTAssertEqual(try Data(contentsOf: account.url), originalJSON)
+        XCTAssertEqual(store.account(for: account.address)?.url, account.url)
+        XCTAssertEqual(try store.exportMnemonic(account: account, password: password), mnemonic)
+        XCTAssertEqual(try store.exportPrivateKey(account: account, password: password), originalPrivateKey)
+        XCTAssertEqual(try store.signHash(hash, account: account, password: password), signature)
+
+        try store.delete(account: account, password: password)
+        let reloaded = try KeyStore(keyDirectory: keyDirectory)
+        XCTAssertTrue(reloaded.accounts.isEmpty)
+        XCTAssertNil(reloaded.key(for: account.address))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: account.url.path))
+        let importedAgain = try reloaded.import(mnemonic: mnemonic, encryptPassword: password)
+        XCTAssertEqual(importedAgain.address, account.address)
+    }
+
+    func testAddKeyThenAddAccountAtSamePathPreservesWalletAfterPasswordChange() throws {
+        let store = try KeyStore(keyDirectory: keyDirectory)
+        let account = try store.import(mnemonic: mnemonic,
+                                       passphrase: "core201-passphrase",
+                                       derivationPath: "m/44'/195'/7'/0/3",
+                                       encryptPassword: password)
+        let privateKey = try store.exportPrivateKey(account: account, password: password)
+        let hash = Data(repeating: 0x42, count: 32)
+        let signature = try store.signHash(hash, account: account, password: password)
+        let newPassword = "same-path-new-password"
+        let reencrypted = try store.export(account: account, password: password, newPassword: newPassword)
+        let newKey = try JSONDecoder().decode(KeystoreKey.self, from: reencrypted)
+
+        // The app's legacy password-change shim uses this same two-step save sequence.
+        try store.addKey(key: newKey)
+        try store.addAccount(account: account)
+
+        let reloaded = try KeyStore(keyDirectory: keyDirectory)
+        let reloadedAccount = try XCTUnwrap(reloaded.account(for: account.address))
+        XCTAssertEqual(reloadedAccount.url, account.url)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: keyDirectory.path).count, 1)
+        XCTAssertEqual(try reloaded.exportMnemonic(account: reloadedAccount, password: newPassword), mnemonic)
+        XCTAssertEqual(try reloaded.exportPrivateKey(account: reloadedAccount, password: newPassword), privateKey)
+        XCTAssertEqual(try reloaded.signHash(hash, account: reloadedAccount, password: newPassword), signature)
+        XCTAssertThrowsError(try reloaded.exportPrivateKey(account: reloadedAccount, password: password))
+
+        let exported = try reloaded.export(account: reloadedAccount, password: newPassword, newPassword: newPassword)
+        let target = try KeyStore(keyDirectory: keyDirectory.appendingPathComponent("round-trip"))
+        let imported = try target.import(json: exported, password: newPassword, newPassword: newPassword)
+        XCTAssertEqual(imported.address, account.address)
+        XCTAssertEqual(try target.exportPrivateKey(account: imported, password: newPassword), privateKey)
+        XCTAssertEqual(try target.signHash(hash, account: imported, password: newPassword), signature)
     }
 
     /// The passphrase is a BIP39 derivation input, so losing it across a restart silently
